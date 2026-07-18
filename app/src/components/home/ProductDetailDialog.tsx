@@ -63,7 +63,7 @@ export default function ProductDetailDialog({
   // DB stores plain strings ['S','M'] or objects [{size,stock}] — unify to objects
   const normalizedSizes = ((product.sizes || []) as any[]).map((s: any) =>
     typeof s === 'string'
-      ? { size: s, stock: product.stockQuantity ?? 10 }
+      ? { size: s, stock: (product as any).stock_quantity ?? (product as any).stockQuantity ?? 10 }
       : s
   )
 
@@ -109,10 +109,10 @@ export default function ProductDetailDialog({
       if (sizeObj) return sizeObj.stock
       if (colorObj) return colorObj.stock
       // No size selected but sizes exist — show stock of first available
-      return normalizedSizes[0]?.stock ?? (product.stockQuantity ?? 0)
+      return normalizedSizes[0]?.stock ?? ((product as any).stock_quantity ?? (product as any).stockQuantity ?? 0)
     }
     // No sizes at all — fall back to stockQuantity
-    return product.stockQuantity ?? 0
+    return (product as any).stock_quantity ?? (product as any).stockQuantity ?? 0
   }
 
   const stockCount = getStockCount()

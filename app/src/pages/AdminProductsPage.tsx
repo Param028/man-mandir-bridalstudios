@@ -37,13 +37,6 @@ export default function AdminProductsPage() {
   const primaryInputRef = useRef<HTMLInputElement>(null)
   const hoverInputRef = useRef<HTMLInputElement>(null)
 
-  const getAuthHeader = () => {
-    const adminInfo = localStorage.getItem('adminInfo')
-    if (!adminInfo) return {}
-    const { token } = JSON.parse(adminInfo)
-    return { Authorization: `Bearer ${token}` }
-  }
-
   const resetForm = () => {
     setFormName('')
     setFormCategory('lehenga')

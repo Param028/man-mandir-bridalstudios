@@ -31,13 +31,6 @@ export default function AdminGalleryManagerPage() {
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
 
-  const getAuthHeader = () => {
-    const adminInfo = localStorage.getItem('adminInfo')
-    if (!adminInfo) return {}
-    const { token } = JSON.parse(adminInfo)
-    return { Authorization: `Bearer ${token}` }
-  }
-
   const fetchData = async () => {
     if (!id) return
     try {
@@ -75,7 +68,7 @@ export default function AdminGalleryManagerPage() {
     formData.append('photoOfTheWeekId', id)
 
     try {
-      const newItems = [];
+      const newItems: any[] = [];
       const fileArray = Array.from(files);
       
       for (let i = 0; i < fileArray.length; i++) {

@@ -5,7 +5,7 @@ import { format } from 'date-fns'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
-import useRazorpay from 'react-razorpay'
+import { useRazorpay } from 'react-razorpay'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
 import StepIndicator from '@/components/booking/StepIndicator'
@@ -23,7 +23,7 @@ interface CustomerData {
 
 export default function BookingPage() {
   const navigate = useNavigate()
-  const [Razorpay] = useRazorpay()
+  const { Razorpay } = useRazorpay()
   const [step, setStep] = useState(1)
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [selectedSlot, setSelectedSlot] = useState<BookingSlot | null>(null)
