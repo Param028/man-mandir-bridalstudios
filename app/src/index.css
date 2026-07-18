@@ -1,0 +1,103 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* ManMandir Design System */
+    --bg-primary: #F5F0E8;
+    --bg-secondary: #EDE6DA;
+    --bg-dark: #1A1A1A;
+    --bg-white: #FFFFFF;
+    --bg-muted: #F8F5F0;
+    --text-primary: #2C2C2C;
+    --text-secondary: #6B6560;
+    --text-light: #FFFFFF;
+    --text-muted: #9B9590;
+    --text-admin: #A0A0A0;
+    --accent-gold: #C9A96E;
+    --accent-gold-hover: #B8985E;
+    --accent-gold-light: #E8DCC8;
+    --accent-gold-transparent: rgba(201, 169, 110, 0.12);
+    --border-subtle: #DDD6CC;
+    --border-admin: #E5E0D8;
+    --border-input: #D0C9C0;
+    --border-focus: #C9A96E;
+    --status-success: #4A8C6F;
+    --status-error: #C4705A;
+    --status-warning: #C9A84C;
+    --status-pending: #8B9DC3;
+
+    /* shadcn/ui overrides - warm theme */
+    --background: 39 33% 93%;
+    --foreground: 0 0% 17%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 17%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 17%;
+    --primary: 39 39% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 36 24% 90%;
+    --secondary-foreground: 0 0% 17%;
+    --muted: 36 24% 90%;
+    --muted-foreground: 30 5% 41%;
+    --accent: 36 24% 90%;
+    --accent-foreground: 0 0% 17%;
+    --destructive: 14 47% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 30 14% 83%;
+    --input: 30 14% 80%;
+    --ring: 39 39% 60%;
+    --radius: 0.25rem;
+    --sidebar-background: 0 0% 10%;
+    --sidebar-foreground: 0 0% 63%;
+    --sidebar-primary: 39 39% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 39 39% 15%;
+    --sidebar-accent-foreground: 0 0% 63%;
+    --sidebar-border: 0 0% 15%;
+    --sidebar-ring: 39 39% 60%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+    word-break: keep-all;
+  }
+
+  ::selection {
+    background-color: var(--accent-gold);
+    color: var(--text-light);
+  }
+}
+
+@layer utilities {
+  .luxury-ease {
+    transition-timing-function: cubic-bezier(0.25, 0.1, 0.25, 1);
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .editorial-shadow {
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+}
