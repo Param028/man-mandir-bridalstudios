@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { Volume2, VolumeX } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { supabase } from '@/lib/supabase'
@@ -86,16 +87,12 @@ export default function HeroVideoSection() {
           transition={{ duration: 0.8, delay: 0.7, ease: 'easeOut' }}
           className="mt-8"
         >
-          <a
-            href="#collections"
-            onClick={(e) => {
-              e.preventDefault()
-              document.getElementById('collections')?.scrollIntoView({ behavior: 'smooth' })
-            }}
-            className="inline-block font-body text-[12px] md:text-[13px] tracking-[0.15em] uppercase px-8 py-3.5 border border-white/80 text-white hover:bg-[#C9A96E] hover:border-[#C9A96E] transition-all duration-300"
+          <Link
+            to="/products"
+            className="inline-block font-body text-[12px] md:text-[13px] tracking-[0.15em] uppercase px-8 py-3.5 border border-white/80 text-white hover:bg-[#C9A96E] hover:border-[#C9A96E] hover:text-white transition-all duration-300"
           >
             EXPLORE COLLECTION
-          </a>
+          </Link>
         </motion.div>
       </div>
 

@@ -1,17 +1,21 @@
 import { useState, useEffect } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { Menu, X, ShoppingBag } from 'lucide-react'
+import { Menu, X, ShoppingBag, Search, User, Heart } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useCart } from '@/lib/cartContext'
 
 const NAV_LINKS = [
-  { label: 'COLLECTIONS', href: '/#collections' },
-  { label: 'GALLERY', href: '/#gallery' },
+  { label: 'BRIDAL', href: '/bridal' },
+  { label: 'SAREES', href: '/sarees' },
+  { label: 'LEHENGAS', href: '/lehengas' },
+  { label: 'SHOP BY OCCASION', href: '/products' },
+  { label: 'BESTSELLERS', href: '/products?sort=bestsellers' },
 ]
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
   const location = useLocation()
   const navigate = useNavigate()
   const isHome = location.pathname === '/'
@@ -25,11 +29,15 @@ export default function Navbar() {
 
   const handleNavClick = (href: string) => {
     setMobileOpen(false)
-    const id = href.replace('/#', '')
-    if (isHome) {
-      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
+    if (href.startsWith('/')) {
+      navigate(href)
     } else {
-      navigate('/', { state: { scrollTo: id } })
+      const id = href.replace('/#', '')
+      if (isHome) {
+        document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
+      } else {
+        navigate('/', { state: { scrollTo: id } })
+      }
     }
   }
 
@@ -82,20 +90,29 @@ export default function Navbar() {
           </Link>
 
           {/* Right Nav Links + CTA - Desktop */}
-          <div className="hidden lg:flex items-center gap-8">
-            <a
-              href="/#story"
-              onClick={(e) => {
-                e.preventDefault()
-                handleNavClick('/#story')
-              }}
-              className={`font-body text-[13px] tracking-[0.18em] uppercase transition-colors duration-300 hover:text-[#C9A96E] relative group ${
-                isTransparent ? 'text-white' : 'text-[#2C2C2C]'
-              }`}
+          <div className="hidden lg:flex items-center gap-6">
+            {/* Search Icon */}
+            <button
+              onClick={() => setSearchOpen(!searchOpen)}
+              className={`relative transition-colors duration-300 hover:text-[#C9A96E] ${isTransparent ? 'text-white' : 'text-[#2C2C2C]'}`}
+              aria-label="Search"
             >
-              OUR STORY
-              <span className="absolute bottom-[-2px] left-0 w-0 h-[1px] bg-[#C9A96E] transition-all duration-300 group-hover:w-full" />
-            </a>
+              <Search size={20} />
+            </button>
+            {/* User Account Icon */}
+            <button
+              className={`relative transition-colors duration-300 hover:text-[#C9A96E] ${isTransparent ? 'text-white' : 'text-[#2C2C2C]'}`}
+              aria-label="Account"
+            >
+              <User size={20} />
+            </button>
+            {/* Wishlist Icon */}
+            <button
+              className={`relative transition-colors duration-300 hover:text-[#C9A96E] ${isTransparent ? 'text-white' : 'text-[#2C2C2C]'}`}
+              aria-label="Wishlist"
+            >
+              <Heart size={20} />
+            </button>
             {/* Cart Icon */}
             <button
               onClick={() => navigate('/checkout')}
@@ -136,6 +153,13 @@ export default function Navbar() {
               )}
             </button>
             <button
+              onClick={() => setSearchOpen(!searchOpen)}
+              className={`relative transition-colors duration-300 ${isTransparent ? 'text-white' : 'text-[#2C2C2C]'}`}
+              aria-label="Search"
+            >
+              <Search size={20} />
+            </button>
+            <button
               onClick={() => setMobileOpen(!mobileOpen)}
               className={`transition-colors duration-300 ${isTransparent ? 'text-white' : 'text-[#2C2C2C]'}`}
             >
@@ -172,28 +196,26 @@ export default function Navbar() {
               </button>
               <div className="mt-16 flex flex-col gap-6">
                 {NAV_LINKS.map((link) => (
-                  <a
+                  <Link
                     key={link.label}
-                    href={link.href}
-                    onClick={(e) => {
-                      e.preventDefault()
-                      handleNavClick(link.href)
-                    }}
+                    to={link.href}
+                    onClick={() => setMobileOpen(false)}
                     className="font-body text-base text-[#2C2C2C] hover:text-[#C9A96E] transition-colors"
                   >
                     {link.label}
-                  </a>
+                  </Link>
                 ))}
-                <a
-                  href="/#story"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    handleNavClick('/#story')
-                  }}
-                  className="font-body text-base text-[#2C2C2C] hover:text-[#C9A96E] transition-colors"
-                >
-                  OUR STORY
-                </a>
+                <div className="flex items-center gap-4 mt-4 pt-4 border-t border-[#DDD6CC]">
+                  <button className="text-[#2C2C2C] hover:text-[#C9A96E] transition-colors">
+                    <Search size={20} />
+                  </button>
+                  <button className="text-[#2C2C2C] hover:text-[#C9A96E] transition-colors">
+                    <User size={20} />
+                  </button>
+                  <button className="text-[#2C2C2C] hover:text-[#C9A96E] transition-colors">
+                    <Heart size={20} />
+                  </button>
+                </div>
                 <Link
                   to="/book-appointment"
                   onClick={() => setMobileOpen(false)}

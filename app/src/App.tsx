@@ -6,6 +6,9 @@ import BookingPage from '@/pages/BookingPage'
 import BookingSuccessPage from '@/pages/BookingSuccessPage'
 import ProductsPage from '@/pages/ProductsPage'
 import CheckoutPage from '@/pages/CheckoutPage'
+import LehengasPage from '@/pages/LehengasPage'
+import SareesPage from '@/pages/SareesPage'
+import BridalPage from '@/pages/BridalPage'
 import AdminLoginPage from '@/pages/AdminLoginPage'
 import AdminDashboardPage from '@/pages/AdminDashboardPage'
 import AdminHeroVideoPage from '@/pages/AdminHeroVideoPage'
@@ -25,6 +28,9 @@ function App() {
         {/* Public Routes */}
         <Route path="/" element={<HomePage />} />
         <Route path="/products" element={<ProductsPage />} />
+        <Route path="/lehengas" element={<LehengasPage />} />
+        <Route path="/sarees" element={<SareesPage />} />
+        <Route path="/bridal" element={<BridalPage />} />
         <Route path="/gallery/:id" element={<GalleryPage />} />
         <Route path="/book-appointment" element={<BookingPage />} />
         <Route path="/booking/success" element={<BookingSuccessPage />} />
