@@ -1,38 +1,31 @@
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '@/lib/supabase'
+
+// Hardcoded admin credentials
+const ADMIN_CREDENTIALS = {
+  email: 'admin@manmandir.com',
+  password: 'ManMandir@2024'
+}
 
 export function useAdminAuth() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    // Check active session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setIsAuthenticated(!!session)
-      setIsLoading(false)
-    })
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setIsAuthenticated(!!session)
-      setIsLoading(false)
-    })
-
-    return () => {
-      subscription.unsubscribe()
-    }
+    // Check if admin is logged in (localStorage)
+    const adminSession = localStorage.getItem('adminSession')
+    setIsAuthenticated(!!adminSession)
+    setIsLoading(false)
   }, [])
 
   const login = useCallback(async (email: string, password: string): Promise<boolean> => {
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      })
-      
-      if (error) throw error
-      
-      return !!data.session
+      // Check against hardcoded credentials
+      if (email === ADMIN_CREDENTIALS.email && password === ADMIN_CREDENTIALS.password) {
+        localStorage.setItem('adminSession', 'true')
+        setIsAuthenticated(true)
+        return true
+      }
+      return false
     } catch (err) {
       console.error('Login failed:', err)
       return false
@@ -40,7 +33,8 @@ export function useAdminAuth() {
   }, [])
 
   const logout = useCallback(async () => {
-    await supabase.auth.signOut()
+    localStorage.removeItem('adminSession')
+    setIsAuthenticated(false)
   }, [])
 
   return { isAuthenticated, isLoading, login, logout }
