@@ -80,7 +80,6 @@ export default function AdminGalleryManagerPage() {
         const newItem = {
           photo_of_the_week_id: id,
           url: fileUrl,
-          public_id: file.name,
           media_type: file.type.startsWith('video') ? 'video' : 'image',
           caption: ''
         };

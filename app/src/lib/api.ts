@@ -68,25 +68,64 @@ export const useDeleteProduct = () => {
 };
 
 // Utility for file uploads
-export const uploadFile = async (bucket: string, file: File) => {
+// Utility for file uploads
+import * as tus from 'tus-js-client';
+
+export const uploadFile = async (bucket: string, file: File, onProgress?: (progress: number) => void) => {
   const fileExt = file.name.split('.').pop();
   const fileName = `${Date.now()}-${Math.random()}.${fileExt}`;
   const filePath = `${fileName}`;
 
-  try {
-    const { error: uploadError } = await supabase.storage
-      .from(bucket)
-      .upload(filePath, file);
+  return new Promise<string>(async (resolve, reject) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      if (!supabaseUrl) throw new Error('Supabase URL not found');
+      
+      const endpoint = `${supabaseUrl}/storage/v1/upload/resumable`;
+      
+      const upload = new tus.Upload(file, {
+        endpoint,
+        retryDelays: [0, 3000, 5000, 10000, 20000],
+        headers: {
+          authorization: `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'x-upsert': 'true',
+        },
+        uploadDataDuringCreation: true,
+        removeFingerprintOnSuccess: true,
+        metadata: {
+          bucketName: bucket,
+          objectName: filePath,
+          contentType: file.type || 'application/octet-stream',
+          cacheControl: '3600',
+        },
+        onSuccess: () => {
+          const { data } = supabase.storage.from(bucket).getPublicUrl(filePath);
+          resolve(data.publicUrl);
+        },
+        onError: (error) => {
+          console.error('TUS upload failed:', error);
+          reject(error);
+        },
+        onProgress: (bytesUploaded, bytesTotal) => {
+          if (onProgress) {
+            const percentage = Math.round((bytesUploaded / bytesTotal) * 100);
+            onProgress(percentage);
+          }
+        }
+      });
 
-    if (uploadError) {
-      console.error('Upload error:', uploadError);
-      throw uploadError;
+      // Start the upload
+      upload.findPreviousUploads().then((previousUploads) => {
+        if (previousUploads.length) {
+          upload.resumeFromPreviousUpload(previousUploads[0]);
+        }
+        upload.start();
+      });
+    } catch (error) {
+      console.error('File upload failed:', error);
+      reject(error);
     }
-
-    const { data } = supabase.storage.from(bucket).getPublicUrl(filePath);
-    return data.publicUrl;
-  } catch (error) {
-    console.error('File upload failed:', error);
-    throw new Error('Failed to upload file. Please check if storage bucket exists.');
-  }
+  });
 };

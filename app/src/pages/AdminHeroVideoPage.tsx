@@ -77,11 +77,12 @@ export default function AdminHeroVideoPage() {
 
         try {
           // Upload file using our helper (ensure you create a bucket named 'videos')
-          const fileUrl = await uploadFile('videos', file);
+          const fileUrl = await uploadFile('videos', file, (progress) => {
+            setUploadProgress(progress)
+          });
 
           const newVideo = {
             url: fileUrl,
-            public_id: file.name,
             title: 'Hero Video',
             is_active: true
           };
