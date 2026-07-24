@@ -83,7 +83,6 @@ export default function AdminHeroVideoPage() {
 
           const newVideo = {
             url: fileUrl,
-            title: 'Hero Video',
             is_active: true
           };
 
