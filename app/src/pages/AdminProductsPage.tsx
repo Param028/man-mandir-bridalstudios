@@ -30,12 +30,9 @@ export default function AdminProductsPage() {
   // Image state
   const [primaryFile, setPrimaryFile] = useState<File | null>(null)
   const [primaryPreview, setPrimaryPreview] = useState<string>('')
-  const [hoverFile, setHoverFile] = useState<File | null>(null)
-  const [hoverPreview, setHoverPreview] = useState<string>('')
 
   const [saving, setSaving] = useState(false)
   const primaryInputRef = useRef<HTMLInputElement>(null)
-  const hoverInputRef = useRef<HTMLInputElement>(null)
 
   const resetForm = () => {
     setFormName('')
@@ -46,8 +43,6 @@ export default function AdminProductsPage() {
     setFormSizes([])
     setPrimaryFile(null)
     setPrimaryPreview('')
-    setHoverFile(null)
-    setHoverPreview('')
     setEditProduct(null)
   }
 
@@ -60,37 +55,29 @@ export default function AdminProductsPage() {
   const openEdit = (product: any) => {
     resetForm()
     setEditProduct(product)
-    setFormName(product.name || '')
+    setFormName(product.title || product.name || '')
     setFormCategory(product.category || 'lehenga')
     setFormDesc(product.description || '')
     setFormPrice(String(product.price || ''))
-    setFormStock(String(product.stockQuantity || '10'))
+    setFormStock('10')
     // Restore sizes — schema stores plain strings e.g. ['S','M','L']
-    const existingSizes: string[] = (product.sizes || []).map((s: any) =>
+    const existingSizes: string[] = (product.size || product.sizes || []).map((s: any) =>
       typeof s === 'string' ? s : String(s.size || s)
     )
     setFormSizes(existingSizes)
     // Show existing images as previews
-    if (product.primaryImage) setPrimaryPreview(product.primaryImage)
+    if (product.image_url) setPrimaryPreview(product.image_url)
+    else if (product.primaryImage) setPrimaryPreview(product.primaryImage)
     else if (product.images?.[0]?.url) setPrimaryPreview(product.images[0].url)
-    if (product.images?.[1]?.url) setHoverPreview(product.images[1].url)
     setShowModal(true)
   }
 
-  const handleFileChange = (
-    e: React.ChangeEvent<HTMLInputElement>,
-    type: 'primary' | 'hover'
-  ) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
     const preview = URL.createObjectURL(file)
-    if (type === 'primary') {
-      setPrimaryFile(file)
-      setPrimaryPreview(preview)
-    } else {
-      setHoverFile(file)
-      setHoverPreview(preview)
-    }
+    setPrimaryFile(file)
+    setPrimaryPreview(preview)
   }
 
   const handleSave = async () => {
@@ -100,32 +87,31 @@ export default function AdminProductsPage() {
 
     setSaving(true)
     try {
-      let primaryImageUrl = editProduct?.images?.[0]?.url;
-      let hoverImageUrl = editProduct?.images?.[1]?.url;
+      let primaryImageUrl = editProduct?.image_url || editProduct?.images?.[0]?.url;
 
       if (primaryFile) {
-        primaryImageUrl = await uploadFile('gallery', primaryFile); // Using a generic 'gallery' bucket for now
+        try {
+          primaryImageUrl = await uploadFile('products', primaryFile);
+        } catch (uploadErr: any) {
+          console.error('Image upload failed:', uploadErr);
+          toast.error('Image upload failed. Using placeholder URL.');
+          primaryImageUrl = '/assets/photo-week-1.jpg';
+        }
       }
-      if (hoverFile) {
-        hoverImageUrl = await uploadFile('gallery', hoverFile);
-      }
-
-      const images = [];
-      if (primaryImageUrl) images.push({ url: primaryImageUrl, isCover: true });
-      if (hoverImageUrl) images.push({ url: hoverImageUrl, isCover: false });
 
       const productData = {
-        name: formName,
+        title: formName,
         category: formCategory,
         description: formDesc.trim(),
         price: Number(formPrice),
-        stock_quantity: Number(formStock),
-        sku: editProduct?.sku || `SKU-${Date.now()}`,
-        product_code: editProduct?.product_code || editProduct?.productCode || `PC-${Date.now()}`,
-        gst: 0,
-        status: 'Active',
-        sizes: formSizes,
-        images: images
+        material: '',
+        color: '',
+        size: formSizes,
+        occasion: [],
+        fabric: '',
+        designer: '',
+        image_url: primaryImageUrl || '/assets/photo-week-1.jpg',
+        is_available: true
       };
 
       if (editProduct) {
@@ -141,6 +127,7 @@ export default function AdminProductsPage() {
       setShowModal(false)
       resetForm()
     } catch (err: any) {
+      console.error('Save error:', err);
       toast.error(err.message || 'Save failed')
     } finally {
       setSaving(false)
@@ -367,7 +354,7 @@ export default function AdminProductsPage() {
                 ref={primaryInputRef}
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
-                onChange={(e) => handleFileChange(e, 'primary')}
+                onChange={handleFileChange}
                 className="hidden"
               />
               <div
@@ -392,43 +379,6 @@ export default function AdminProductsPage() {
                     <UploadCloud size={24} className="text-[#9B9590] mx-auto mb-2" />
                     <p className="font-body text-xs text-[#9B9590]">Click to upload primary image</p>
                     <p className="font-body text-[11px] text-[#C0BAB4] mt-1">JPG, PNG, WebP · Max 20MB</p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Hover Image */}
-            <div>
-              <label className="font-body text-xs tracking-[0.1em] uppercase text-[#6B6560] block mb-2">Hover Image (optional)</label>
-              <input
-                ref={hoverInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                onChange={(e) => handleFileChange(e, 'hover')}
-                className="hidden"
-              />
-              <div
-                onClick={() => hoverInputRef.current?.click()}
-                className="border border-dashed border-[#E5E0D8] rounded overflow-hidden hover:border-[#C9A96E] transition-colors cursor-pointer"
-              >
-                {hoverPreview ? (
-                  <div className="relative">
-                    <img src={hoverPreview} alt="Hover" className="w-full h-40 object-cover" />
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setHoverFile(null); setHoverPreview('') }}
-                      className="absolute top-2 right-2 w-7 h-7 bg-black/60 rounded-full flex items-center justify-center text-white hover:bg-black/80 transition-colors"
-                    >
-                      <X size={12} />
-                    </button>
-                    <div className="absolute bottom-0 left-0 right-0 bg-black/40 py-1.5 text-center">
-                      <p className="font-body text-[11px] text-white">Click to replace</p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="p-6 text-center">
-                    <UploadCloud size={24} className="text-[#9B9590] mx-auto mb-2" />
-                    <p className="font-body text-xs text-[#9B9590]">Click to upload hover image</p>
-                    <p className="font-body text-[11px] text-[#C0BAB4] mt-1">Shown on product card hover</p>
                   </div>
                 )}
               </div>

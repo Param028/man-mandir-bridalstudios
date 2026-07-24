@@ -70,17 +70,23 @@ export const useDeleteProduct = () => {
 // Utility for file uploads
 export const uploadFile = async (bucket: string, file: File) => {
   const fileExt = file.name.split('.').pop();
-  const fileName = `${Math.random()}.${fileExt}`;
+  const fileName = `${Date.now()}-${Math.random()}.${fileExt}`;
   const filePath = `${fileName}`;
 
-  const { error: uploadError } = await supabase.storage
-    .from(bucket)
-    .upload(filePath, file);
+  try {
+    const { error: uploadError } = await supabase.storage
+      .from(bucket)
+      .upload(filePath, file);
 
-  if (uploadError) {
-    throw uploadError;
+    if (uploadError) {
+      console.error('Upload error:', uploadError);
+      throw uploadError;
+    }
+
+    const { data } = supabase.storage.from(bucket).getPublicUrl(filePath);
+    return data.publicUrl;
+  } catch (error) {
+    console.error('File upload failed:', error);
+    throw new Error('Failed to upload file. Please check if storage bucket exists.');
   }
-
-  const { data } = supabase.storage.from(bucket).getPublicUrl(filePath);
-  return data.publicUrl;
 };
