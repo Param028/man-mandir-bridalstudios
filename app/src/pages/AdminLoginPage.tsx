@@ -127,10 +127,6 @@ export default function AdminLoginPage() {
             )}
           </button>
         </form>
-
-        <p className="text-center mt-8 font-body text-xs text-[#9B9590]">
-          Default credentials: admin@manmandir.com / password123
-        </p>
       </motion.div>
     </div>
   )
