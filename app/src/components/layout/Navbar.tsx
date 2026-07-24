@@ -8,7 +8,7 @@ const NAV_LINKS = [
   { label: 'BRIDAL', href: '/bridal' },
   { label: 'SAREES', href: '/sarees' },
   { label: 'LEHENGAS', href: '/lehengas' },
-  { label: 'SHOP BY OCCASION', href: '/products' },
+  { label: 'OCCASION', href: '/products' },
   { label: 'BESTSELLERS', href: '/products?sort=bestsellers' },
 ]
 
@@ -27,20 +27,6 @@ export default function Navbar() {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  const handleNavClick = (href: string) => {
-    setMobileOpen(false)
-    if (href.startsWith('/')) {
-      navigate(href)
-    } else {
-      const id = href.replace('/#', '')
-      if (isHome) {
-        document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
-      } else {
-        navigate('/', { state: { scrollTo: id } })
-      }
-    }
-  }
-
   const isTransparent = isHome && !scrolled
 
   return (
@@ -57,22 +43,18 @@ export default function Navbar() {
       >
         <div className="max-w-[1440px] mx-auto h-full flex items-center justify-between px-6 md:px-12 relative">
           {/* Left Nav Links - Desktop */}
-          <div className="hidden lg:flex items-center gap-8">
+          <div className="hidden lg:flex items-center gap-6">
             {NAV_LINKS.map((link) => (
-              <a
+              <Link
                 key={link.label}
-                href={link.href}
-                onClick={(e) => {
-                  e.preventDefault()
-                  handleNavClick(link.href)
-                }}
-                className={`font-body text-[13px] tracking-[0.18em] uppercase transition-colors duration-300 hover:text-[#C9A96E] relative group ${
+                to={link.href}
+                className={`font-body text-[11px] tracking-[0.15em] uppercase transition-colors duration-300 hover:text-[#C9A96E] relative group whitespace-nowrap ${
                   isTransparent ? 'text-white' : 'text-[#2C2C2C]'
                 }`}
               >
                 {link.label}
                 <span className="absolute bottom-[-2px] left-0 w-0 h-[1px] bg-[#C9A96E] transition-all duration-300 group-hover:w-full" />
-              </a>
+              </Link>
             ))}
           </div>
 
@@ -90,28 +72,28 @@ export default function Navbar() {
           </Link>
 
           {/* Right Nav Links + CTA - Desktop */}
-          <div className="hidden lg:flex items-center gap-6">
+          <div className="hidden lg:flex items-center gap-4">
             {/* Search Icon */}
             <button
               onClick={() => setSearchOpen(!searchOpen)}
               className={`relative transition-colors duration-300 hover:text-[#C9A96E] ${isTransparent ? 'text-white' : 'text-[#2C2C2C]'}`}
               aria-label="Search"
             >
-              <Search size={20} />
+              <Search size={18} />
             </button>
             {/* User Account Icon */}
             <button
               className={`relative transition-colors duration-300 hover:text-[#C9A96E] ${isTransparent ? 'text-white' : 'text-[#2C2C2C]'}`}
               aria-label="Account"
             >
-              <User size={20} />
+              <User size={18} />
             </button>
             {/* Wishlist Icon */}
             <button
               className={`relative transition-colors duration-300 hover:text-[#C9A96E] ${isTransparent ? 'text-white' : 'text-[#2C2C2C]'}`}
               aria-label="Wishlist"
             >
-              <Heart size={20} />
+              <Heart size={18} />
             </button>
             {/* Cart Icon */}
             <button
@@ -119,16 +101,16 @@ export default function Navbar() {
               className={`relative transition-colors duration-300 hover:text-[#C9A96E] ${isTransparent ? 'text-white' : 'text-[#2C2C2C]'}`}
               aria-label="Cart"
             >
-              <ShoppingBag size={20} />
+              <ShoppingBag size={18} />
               {count > 0 && (
-                <span className="absolute -top-2 -right-2 w-4.5 h-4.5 min-w-[18px] min-h-[18px] bg-[#C9A96E] text-white font-body text-[9px] font-bold rounded-full flex items-center justify-center leading-none px-1">
+                <span className="absolute -top-2 -right-2 w-4 h-4 min-w-[16px] min-h-[16px] bg-[#C9A96E] text-white font-body text-[9px] font-bold rounded-full flex items-center justify-center leading-none px-1">
                   {count > 9 ? '9+' : count}
                 </span>
               )}
             </button>
             <Link
               to="/book-appointment"
-              className={`font-body text-[11px] tracking-[0.15em] uppercase px-6 py-2.5 border transition-all duration-300 hover:bg-[#C9A96E] hover:border-[#C9A96E] hover:text-white ${
+              className={`font-body text-[10px] tracking-[0.15em] uppercase px-5 py-2 border transition-all duration-300 hover:bg-[#C9A96E] hover:border-[#C9A96E] hover:text-white whitespace-nowrap ${
                 isTransparent
                   ? 'border-white/80 text-white'
                   : 'border-[#C9A96E] text-[#C9A96E]'
