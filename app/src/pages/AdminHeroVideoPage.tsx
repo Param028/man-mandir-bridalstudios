@@ -1,8 +1,17 @@
 import { useState, useRef, useEffect } from 'react'
-import { UploadCloud, Trash2, Play, Pause } from 'lucide-react'
+import { UploadCloud, Trash2, Play, Pause, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { uploadFile } from '@/lib/api'
+
+const MAX_VIDEO_SIZE_BYTES = 250 * 1024 * 1024 // 250 MB
+const MAX_VIDEO_SIZE_MB = 250
+
+const formatFileSize = (bytes: number): string => {
+  if (bytes === 0) return '0 Bytes'
+  const mb = bytes / (1024 * 1024)
+  return `${mb.toFixed(2)} MB`
+}
 
 export default function AdminHeroVideoPage() {
   const [video, setVideo] = useState<{ url: string; title: string; isActive: boolean; _id?: string } | null>(null)
@@ -10,6 +19,7 @@ export default function AdminHeroVideoPage() {
   const [isPlaying, setIsPlaying] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -25,17 +35,19 @@ export default function AdminHeroVideoPage() {
         .eq('is_active', true)
         .order('created_at', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
         
       if (error) throw error;
       
-      const videoData = {
-        ...data,
-        _id: data.id, // For compatibility
-        isActive: data.is_active
+      if (data) {
+        const videoData = {
+          ...data,
+          _id: data.id, // For compatibility
+          isActive: data.is_active
+        }
+        setVideo(videoData)
+        setIsActive(data.is_active)
       }
-      setVideo(videoData)
-      setIsActive(data.is_active)
     } catch (error) {
       console.log('No active video found')
     }
@@ -45,6 +57,17 @@ export default function AdminHeroVideoPage() {
     if (e) {
       const file = e.target.files?.[0]
       if (file) {
+        // Client-side validation
+        if (file.size > MAX_VIDEO_SIZE_BYTES) {
+          toast.error(
+            `File size (${formatFileSize(file.size)}) exceeds maximum allowed size (${MAX_VIDEO_SIZE_MB} MB). Please compress your video or select a smaller file.`,
+            { duration: 5000 }
+          )
+          setSelectedFile(file)
+          return
+        }
+
+        setSelectedFile(file)
         setIsUploading(true)
         setUploadProgress(0)
 
@@ -78,7 +101,14 @@ export default function AdminHeroVideoPage() {
           setIsActive(data.is_active)
           toast.success('Video uploaded successfully!')
         } catch (error: any) {
-          toast.error(error.message || 'Video upload failed')
+          if (error.message?.includes('exceeded the maximum allowed size')) {
+            toast.error(
+              `File size (${formatFileSize(file.size)}) exceeds maximum allowed size (${MAX_VIDEO_SIZE_MB} MB). Please compress your video or select a smaller file.`,
+              { duration: 5000 }
+            )
+          } else {
+            toast.error(error.message || 'Video upload failed')
+          }
         } finally {
           setIsUploading(false)
           setUploadProgress(0)
@@ -195,8 +225,21 @@ export default function AdminHeroVideoPage() {
           Drag and drop files here, or click to browse
         </p>
         <p className="font-body text-xs text-[#9B9590] mb-4">
-          MP4 or WebM format. Maximum file size: 100MB
+          MP4 or WebM format. Maximum file size: {MAX_VIDEO_SIZE_MB}MB
         </p>
+        {selectedFile && (
+          <div className="flex items-center gap-2 text-xs text-[#6B6560] mb-4">
+            <span>Selected: {selectedFile.name}</span>
+            <span>•</span>
+            <span>{formatFileSize(selectedFile.size)}</span>
+            {selectedFile.size > MAX_VIDEO_SIZE_BYTES && (
+              <span className="text-[#C4705A] font-medium flex items-center gap-1">
+                <AlertCircle size={12} />
+                Exceeds limit
+              </span>
+            )}
+          </div>
+        )}
         {isUploading ? (
           <div className="max-w-[200px] mx-auto">
             <div className="w-full h-1 bg-[#E5E0D8] rounded overflow-hidden">

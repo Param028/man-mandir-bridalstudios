@@ -39,14 +39,16 @@ export default function GalleryPage() {
     const fetchData = async () => {
       try {
         const [photoRes, galleryRes] = await Promise.all([
-          supabase.from('photos_of_week').select('*').eq('id', id).single(),
+          supabase.from('photos_of_week').select('*').eq('id', id).maybeSingle(),
           supabase.from('gallery_items').select('*').eq('photo_of_the_week_id', id)
         ]);
         
         if (photoRes.error) throw photoRes.error;
         if (galleryRes.error) throw galleryRes.error;
 
-        setPhoto({ ...photoRes.data, _id: photoRes.data.id });
+        if (photoRes.data) {
+          setPhoto({ ...photoRes.data, _id: photoRes.data.id });
+        }
         setItems(galleryRes.data.map((item: any) => ({ ...item, _id: item.id, type: item.media_type })));
       } catch (err) {
         setNotFound(true);

@@ -25,10 +25,12 @@ export default function HeroVideoSection() {
           .select('url')
           .eq('is_active', true)
           .limit(1)
-          .single();
+          .maybeSingle();
         
         if (error) throw error;
-        setVideoUrl(data.url)
+        if (data) {
+          setVideoUrl(data.url);
+        }
       } catch (error) {
         console.log('Using default video')
       }
