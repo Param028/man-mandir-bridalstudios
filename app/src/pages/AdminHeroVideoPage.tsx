@@ -54,7 +54,7 @@ export default function AdminHeroVideoPage() {
 
         try {
           // Upload file using our helper (ensure you create a bucket named 'videos')
-          const fileUrl = await uploadFile('gallery', file);
+          const fileUrl = await uploadFile('videos', file);
 
           const newVideo = {
             url: fileUrl,
