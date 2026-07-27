@@ -225,7 +225,9 @@ export default function ProductsPage() {
 
       // Price filter (actual price paid, check discountedPrice first)
       const actualPrice = product.discountedPrice ?? product.price ?? 0
-      if (actualPrice < priceRange[0] || actualPrice > priceRange[1]) return false
+      if (actualPrice < priceRange[0]) return false
+      // If priceRange[1] is at max (250000), treat it as 'no upper limit'
+      if (priceRange[1] < 250000 && actualPrice > priceRange[1]) return false
 
       // Size filter (must have at least one selected size in stock)
       if (selectedSizes.length > 0) {
