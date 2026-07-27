@@ -84,6 +84,23 @@ export const uploadFile = async (bucket: string, file: File, onProgress?: (progr
   const fileName = `${Date.now()}-${Math.random()}.${fileExt}`;
   const filePath = `${fileName}`;
 
+  // For small files (like images for products and gallery), use standard upload
+  if (bucket !== 'videos') {
+    const { error } = await supabase.storage.from(bucket).upload(filePath, file, {
+      cacheControl: '3600',
+      upsert: true
+    });
+
+    if (error) {
+      console.error('File upload failed:', error);
+      throw error;
+    }
+
+    const { data } = supabase.storage.from(bucket).getPublicUrl(filePath);
+    return data.publicUrl;
+  }
+
+  // For large files (like videos), use TUS client for resumable uploads
   return new Promise<string>(async (resolve, reject) => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
