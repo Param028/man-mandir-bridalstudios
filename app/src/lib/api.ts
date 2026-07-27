@@ -6,8 +6,16 @@ import { supabase } from './supabase';
 export const getProducts = async () => {
   const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false });
   if (error) throw error;
-  // Map Supabase id to _id for backward compatibility in components
-  return data.map(p => ({ ...p, _id: p.id }));
+  // Map Supabase fields to frontend Product interface for backward compatibility
+  return data.map(p => ({
+    ...p,
+    _id: p.id,
+    name: p.title || p.name || 'Unnamed Product',
+    primaryImage: p.image_url || p.primaryImage || '/assets/photo-week-1.jpg',
+    secondaryImage: p.secondary_image_url || p.secondaryImage || p.image_url || '/assets/photo-week-2.jpg',
+    active: p.is_available ?? true,
+    sizes: p.size || p.sizes || [],
+  }));
 };
 
 export const createProduct = async (productData: any) => {
