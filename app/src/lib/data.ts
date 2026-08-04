@@ -15,7 +15,9 @@ export interface GalleryItem {
 export interface Product {
   id: number
   name: string
-  category: 'lehenga' | 'cocktail' | 'saree' | 'indo-western'
+  category: string
+  category_id?: string
+  subcategory_id?: string
   primaryImage: string
   secondaryImage: string
   description: string

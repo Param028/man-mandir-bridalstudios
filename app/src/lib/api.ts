@@ -15,6 +15,8 @@ export const getProducts = async () => {
     secondaryImage: p.secondary_image_url || p.secondaryImage || p.image_url || '/assets/photo-week-2.jpg',
     active: p.is_available ?? true,
     sizes: p.size || p.sizes || [],
+    category_id: p.category_id,
+    subcategory_id: p.subcategory_id,
   }));
 };
 
@@ -32,6 +34,62 @@ export const updateProduct = async ({ id, productData }: { id: string; productDa
 
 export const deleteProduct = async (id: string) => {
   const { data, error } = await supabase.from('products').delete().eq('id', id);
+  if (error) throw error;
+  return data;
+};
+
+// --- Categories API ---
+
+export const getCategories = async () => {
+  const { data, error } = await supabase.from('categories').select('*').order('created_at', { ascending: true });
+  if (error) throw error;
+  return data;
+};
+
+export const createCategory = async (categoryData: any) => {
+  const { data, error } = await supabase.from('categories').insert([categoryData]).select();
+  if (error) throw error;
+  return data;
+};
+
+export const updateCategory = async ({ id, categoryData }: { id: string; categoryData: any }) => {
+  const { data, error } = await supabase.from('categories').update(categoryData).eq('id', id).select();
+  if (error) throw error;
+  return data;
+};
+
+export const deleteCategory = async (id: string) => {
+  const { data, error } = await supabase.from('categories').delete().eq('id', id);
+  if (error) throw error;
+  return data;
+};
+
+// --- Subcategories API ---
+
+export const getSubcategories = async (categoryId?: string) => {
+  let query = supabase.from('subcategories').select('*').order('created_at', { ascending: true });
+  if (categoryId) {
+    query = query.eq('category_id', categoryId);
+  }
+  const { data, error } = await query;
+  if (error) throw error;
+  return data;
+};
+
+export const createSubcategory = async (subcategoryData: any) => {
+  const { data, error } = await supabase.from('subcategories').insert([subcategoryData]).select();
+  if (error) throw error;
+  return data;
+};
+
+export const updateSubcategory = async ({ id, subcategoryData }: { id: string; subcategoryData: any }) => {
+  const { data, error } = await supabase.from('subcategories').update(subcategoryData).eq('id', id).select();
+  if (error) throw error;
+  return data;
+};
+
+export const deleteSubcategory = async (id: string) => {
+  const { data, error } = await supabase.from('subcategories').delete().eq('id', id);
   if (error) throw error;
   return data;
 };
@@ -71,6 +129,81 @@ export const useDeleteProduct = () => {
     mutationFn: deleteProduct,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
+    },
+  });
+};
+
+export const useCategories = () => {
+  return useQuery({
+    queryKey: ['categories'],
+    queryFn: getCategories,
+  });
+};
+
+export const useCreateCategory = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: createCategory,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+    },
+  });
+};
+
+export const useUpdateCategory = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: updateCategory,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+    },
+  });
+};
+
+export const useDeleteCategory = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: deleteCategory,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+      queryClient.invalidateQueries({ queryKey: ['subcategories'] });
+    },
+  });
+};
+
+export const useSubcategories = (categoryId?: string) => {
+  return useQuery({
+    queryKey: ['subcategories', categoryId],
+    queryFn: () => getSubcategories(categoryId),
+  });
+};
+
+export const useCreateSubcategory = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: createSubcategory,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['subcategories'] });
+    },
+  });
+};
+
+export const useUpdateSubcategory = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: updateSubcategory,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['subcategories'] });
+    },
+  });
+};
+
+export const useDeleteSubcategory = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: deleteSubcategory,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['subcategories'] });
     },
   });
 };

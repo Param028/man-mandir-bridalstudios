@@ -5,19 +5,11 @@ import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
 import ProductCard from '@/components/home/ProductCard'
 import ProductDetailDialog from '@/components/home/ProductDetailDialog'
-import { useProducts } from '@/lib/api'
+import { useProducts, useCategories, useSubcategories } from '@/lib/api'
 import type { Product } from '@/lib/data'
 import { Slider } from '@/components/ui/slider'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from '@/components/ui/sheet'
 import { motion, AnimatePresence } from 'framer-motion'
-
-// Categories matching options
-const CATEGORY_OPTIONS = [
-  { id: 'lehenga', label: 'Bridal Lehenga' },
-  { id: 'saree', label: 'Saree' },
-  { id: 'cocktail', label: 'Gown' },
-  { id: 'indo-western', label: 'Reception Wear' },
-]
 
 // Size options
 const SIZE_OPTIONS = ['XS', 'S', 'M', 'L', 'XL', 'XXL']
@@ -65,11 +57,16 @@ export default function ProductsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
 
-  const { data: products = [], isLoading } = useProducts()
+  const { data: products = [], isLoading: loadingProducts } = useProducts()
+  const { data: categories = [], isLoading: loadingCategories } = useCategories()
+  const { data: subcategories = [], isLoading: loadingSubcategories } = useSubcategories()
+
+  const isLoading = loadingProducts || loadingCategories || loadingSubcategories
 
   // Filter States
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
+  const [selectedSubcategories, setSelectedSubcategories] = useState<string[]>([])
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 250000])
   const [selectedSizes, setSelectedSizes] = useState<string[]>([])
   const [selectedColors, setSelectedColors] = useState<string[]>([])
@@ -80,6 +77,7 @@ export default function ProductsPage() {
   // Collapsible sections state (desktop sidebar)
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     categories: true,
+    subcategories: true,
     price: true,
     sizes: true,
     colors: true,
@@ -95,19 +93,28 @@ export default function ProductsPage() {
   // Mobile drawer filter open state
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false)
 
-  // Sync category from URL search query on mount and query changes
+  // Sync category and subcategory from URL search query on mount and query changes
   useEffect(() => {
     const categoryQuery = searchParams.get('category')
+    const subcategoryQuery = searchParams.get('subcategory')
+    
     if (categoryQuery) {
-      // If the category matches a valid category, set it
-      const categoryExists = CATEGORY_OPTIONS.some((c) => c.id === categoryQuery)
+      const categoryExists = categories.some((c: any) => c.id === categoryQuery || c.slug === categoryQuery)
       if (categoryExists) {
         setSelectedCategories([categoryQuery])
+      } else {
+        setSelectedCategories([categoryQuery]) // Fallback if categories are loading
       }
     } else {
       setSelectedCategories([])
     }
-  }, [searchParams])
+
+    if (subcategoryQuery) {
+      setSelectedSubcategories([subcategoryQuery])
+    } else {
+      setSelectedSubcategories([])
+    }
+  }, [searchParams, categories])
 
   const toggleSection = (section: string) => {
     setOpenSections((prev) => ({ ...prev, [section]: !prev[section] }))
@@ -120,14 +127,34 @@ export default function ProductsPage() {
         ? prev.filter((id) => id !== categoryId)
         : [...prev, categoryId]
       
-      // Update search params to keep URL in sync
-      if (updated.length === 1) {
-        setSearchParams({ category: updated[0] })
+      const params = new URLSearchParams(searchParams)
+      if (updated.length > 0) {
+        params.set('category', updated[0])
       } else {
-        const params = new URLSearchParams(searchParams)
         params.delete('category')
-        setSearchParams(params)
       }
+      // Reset subcategories when category changes
+      params.delete('subcategory')
+      setSelectedSubcategories([])
+      
+      setSearchParams(params)
+      return updated
+    })
+  }
+
+  const handleSubcategoryToggle = (subcategoryId: string) => {
+    setSelectedSubcategories((prev) => {
+      const updated = prev.includes(subcategoryId)
+        ? prev.filter((id) => id !== subcategoryId)
+        : [...prev, subcategoryId]
+      
+      const params = new URLSearchParams(searchParams)
+      if (updated.length > 0) {
+        params.set('subcategory', updated[0])
+      } else {
+        params.delete('subcategory')
+      }
+      setSearchParams(params)
       return updated
     })
   }
@@ -182,6 +209,9 @@ export default function ProductsPage() {
       case 'category':
         handleCategoryToggle(value)
         break
+      case 'subcategory':
+        handleSubcategoryToggle(value)
+        break
       case 'size':
         handleSizeToggle(value)
         break
@@ -220,7 +250,12 @@ export default function ProductsPage() {
 
       // Category filter
       if (selectedCategories.length > 0) {
-        if (!selectedCategories.includes(product.category)) return false
+        if (!selectedCategories.includes(product.category_id) && !selectedCategories.includes(product.category)) return false
+      }
+
+      // Subcategory filter
+      if (selectedSubcategories.length > 0) {
+        if (!selectedSubcategories.includes(product.subcategory_id)) return false
       }
 
       // Price filter (actual price paid, check discountedPrice first)
@@ -284,8 +319,13 @@ export default function ProductsPage() {
     }
 
     selectedCategories.forEach((catId) => {
-      const label = CATEGORY_OPTIONS.find((c) => c.id === catId)?.label || catId
+      const label = categories.find((c: any) => c.id === catId || c.slug === catId)?.name || catId
       tags.push({ type: 'category', label: `Category: ${label}`, value: catId })
+    })
+
+    selectedSubcategories.forEach((subId) => {
+      const label = subcategories.find((s: any) => s.id === subId)?.name || subId
+      tags.push({ type: 'subcategory', label: `Subcategory: ${label}`, value: subId })
     })
 
     if (priceRange[0] > 0 || priceRange[1] < 250000) {
@@ -358,16 +398,16 @@ export default function ProductsPage() {
               transition={{ duration: 0.2 }}
               className="overflow-hidden space-y-2.5"
             >
-              {CATEGORY_OPTIONS.map((opt) => (
+              {categories.map((opt: any) => (
                 <label key={opt.id} className="flex items-center gap-3 cursor-pointer group">
                   <input
                     type="checkbox"
-                    checked={selectedCategories.includes(opt.id)}
+                    checked={selectedCategories.includes(opt.id) || selectedCategories.includes(opt.slug)}
                     onChange={() => handleCategoryToggle(opt.id)}
                     className="w-4 h-4 rounded border-[#D0C9C0] text-[#C9A96E] focus:ring-[#C9A96E]"
                   />
                   <span className="font-body text-xs text-[#6B6560] group-hover:text-[#2C2C2C] transition-colors">
-                    {opt.label}
+                    {opt.name}
                   </span>
                 </label>
               ))}
@@ -375,6 +415,46 @@ export default function ProductsPage() {
           )}
         </AnimatePresence>
       </div>
+
+      {/* Subcategory Filter - Only show if a category is selected and has subcategories */}
+      {selectedCategories.length === 1 && subcategories.filter((s: any) => selectedCategories.includes(s.category_id)).length > 0 && (
+        <div className="border-b border-[#EDE6DA] pb-5">
+          <button
+            onClick={() => toggleSection('subcategories')}
+            className="w-full flex items-center justify-between font-body text-xs tracking-wider uppercase text-[#2C2C2C] font-semibold text-left mb-3 hover:text-[#C9A96E] transition-colors"
+          >
+            <span>Subcategories</span>
+            {openSections.subcategories ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+          </button>
+          <AnimatePresence initial={false}>
+            {openSections.subcategories && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden space-y-2.5"
+              >
+                {subcategories
+                  .filter((s: any) => selectedCategories.includes(s.category_id))
+                  .map((opt: any) => (
+                  <label key={opt.id} className="flex items-center gap-3 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      checked={selectedSubcategories.includes(opt.id)}
+                      onChange={() => handleSubcategoryToggle(opt.id)}
+                      className="w-4 h-4 rounded border-[#D0C9C0] text-[#C9A96E] focus:ring-[#C9A96E]"
+                    />
+                    <span className="font-body text-xs text-[#6B6560] group-hover:text-[#2C2C2C] transition-colors">
+                      {opt.name}
+                    </span>
+                  </label>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
 
       {/* Price Range Filter */}
       <div className="border-b border-[#EDE6DA] pb-5">

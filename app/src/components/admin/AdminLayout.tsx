@@ -6,10 +6,13 @@ import {
 } from 'lucide-react'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
 
+import { FolderTree } from 'lucide-react'
+
 const navItems = [
   { icon: BarChart3, label: 'Dashboard', path: '/admin/dashboard' },
   { icon: Video, label: 'Hero Video', path: '/admin/hero-video' },
   { icon: Image, label: 'Photos of Week', path: '/admin/photos-of-week' },
+  { icon: FolderTree, label: 'Categories', path: '/admin/categories' },
   { icon: Grid3X3, label: 'Products', path: '/admin/products' },
   { icon: Calendar, label: 'Bookings', path: '/admin/bookings' },
   { icon: CreditCard, label: 'Payments', path: '/admin/payments' },

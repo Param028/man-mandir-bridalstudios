@@ -15,6 +15,7 @@ import AdminHeroVideoPage from '@/pages/AdminHeroVideoPage'
 import AdminPhotosPage from '@/pages/AdminPhotosPage'
 import AdminGalleryManagerPage from '@/pages/AdminGalleryManagerPage'
 import AdminProductsPage from '@/pages/AdminProductsPage'
+import AdminCategoriesPage from '@/pages/AdminCategoriesPage'
 import AdminBookingsPage from '@/pages/AdminBookingsPage'
 import AdminPaymentsPage from '@/pages/AdminPaymentsPage'
 import AdminSettingsPage from '@/pages/AdminSettingsPage'
@@ -44,6 +45,7 @@ function App() {
           <Route path="/admin/photos-of-week" element={<AdminPhotosPage />} />
           <Route path="/admin/gallery/:id" element={<AdminGalleryManagerPage />} />
           <Route path="/admin/products" element={<AdminProductsPage />} />
+          <Route path="/admin/categories" element={<AdminCategoriesPage />} />
           <Route path="/admin/bookings" element={<AdminBookingsPage />} />
           <Route path="/admin/payments" element={<AdminPaymentsPage />} />
           <Route path="/admin/settings" element={<AdminSettingsPage />} />
