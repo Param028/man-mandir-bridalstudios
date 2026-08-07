@@ -467,11 +467,9 @@ export default function ProductDetailDialog({
                       <span className="font-body text-xs font-semibold text-[#4A8C6F]">
                         In Stock
                       </span>
-                      {stockCount <= 3 && (
-                        <span className="font-body text-[10px] text-[#C9A84C] font-semibold bg-[rgba(201,168,76,0.1)] px-2 py-0.5 rounded ml-1">
-                          Only {stockCount} left!
-                        </span>
-                      )}
+                      <span className="font-body text-[10px] text-[#4A8C6F] font-semibold bg-[rgba(74,140,111,0.1)] px-2 py-0.5 rounded ml-1">
+                        {stockCount} available
+                      </span>
                     </>
                   ) : (
                     <>
