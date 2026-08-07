@@ -141,6 +141,22 @@ export const useDeleteProduct = () => {
   });
 };
 
+export const placeOrder = async (orderData: any) => {
+  const { data, error } = await supabase.rpc('place_order', orderData);
+  if (error) throw error;
+  return data;
+};
+
+export const usePlaceOrder = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: placeOrder,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+    },
+  });
+};
+
 export const useCategories = () => {
   return useQuery({
     queryKey: ['categories'],

@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
 import { useCart } from '@/lib/cartContext'
+import { usePlaceOrder } from '@/lib/api'
 
 const STATES = [
   'Andhra Pradesh','Arunachal Pradesh','Assam','Bihar','Chhattisgarh','Goa','Gujarat',
@@ -37,6 +38,7 @@ export default function CheckoutPage() {
   const [errors, setErrors] = useState<Partial<ShippingForm>>({})
   const [paymentMethod, setPaymentMethod] = useState<'cod' | 'online'>('online')
   const [placing, setPlacing] = useState(false)
+  const { mutateAsync: placeOrderMutation } = usePlaceOrder()
 
   const fmt = (n: number) =>
     new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n)
@@ -58,11 +60,37 @@ export default function CheckoutPage() {
   // ── Place order ──────────────────────────────────────────────────────────────
   const placeOrder = async () => {
     setPlacing(true)
-    // Simulate order placement — replace with real API call
-    await new Promise((r) => setTimeout(r, 1500))
-    clearCart()
-    setStep('confirmed')
-    setPlacing(false)
+    try {
+      const orderData = {
+        p_customer_name: form.name,
+        p_customer_email: form.email,
+        p_customer_phone: form.phone,
+        p_shipping_address: form.address,
+        p_city: form.city,
+        p_state: form.state,
+        p_pincode: form.pincode,
+        p_total_amount: total,
+        p_payment_method: paymentMethod,
+        p_items: items.map(item => ({
+          product_id: String((item.product as any)._id || item.product.id),
+          product_name: item.product.name,
+          size: item.size || null,
+          color: item.color || null,
+          quantity: item.quantity,
+          price: item.product.discountedPrice || item.product.price || 0
+        }))
+      }
+      
+      await placeOrderMutation(orderData)
+      
+      clearCart()
+      setStep('confirmed')
+    } catch (err) {
+      console.error('Failed to place order:', err)
+      alert('Failed to place order. Please try again.')
+    } finally {
+      setPlacing(false)
+    }
   }
 
   const field = (key: keyof ShippingForm, label: string, type = 'text', placeholder = '') => (
