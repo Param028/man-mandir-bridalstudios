@@ -64,12 +64,16 @@ export default function AdminProductsPage() {
     setFormSubcategoryId(product.subcategory_id || '')
     setFormDesc(product.description || '')
     setFormPrice(String(product.price || ''))
-    setFormStock('10')
-    
     const existingSizes: string[] = (product.size || product.sizes || []).map((s: any) =>
       typeof s === 'string' ? s : String(s.size || s)
     )
-    setFormSizes(existingSizes)
+    const stockSize = existingSizes.find(s => s.startsWith('STOCK:'))
+    if (stockSize) {
+      setFormStock(stockSize.split(':')[1])
+    } else {
+      setFormStock(product.is_available ? '10' : '0')
+    }
+    setFormSizes(existingSizes.filter(s => !s.startsWith('STOCK:')))
     
     if (product.image_url) setPrimaryPreview(product.image_url)
     else if (product.primaryImage) setPrimaryPreview(product.primaryImage)
@@ -109,6 +113,11 @@ export default function AdminProductsPage() {
       const categoryObj = categories.find((c: any) => c.id === formCategoryId)
       const categorySlug = categoryObj ? categoryObj.slug : formCategoryId
 
+      const sizePayload = [...formSizes]
+      if (formStock) {
+        sizePayload.push(`STOCK:${formStock}`)
+      }
+
       const productData = {
         title: formName,
         category: categorySlug, // Fallback string for legacy components
@@ -118,12 +127,12 @@ export default function AdminProductsPage() {
         price: Number(formPrice),
         material: '',
         color: '',
-        size: formSizes,
+        size: sizePayload,
         occasion: [],
         fabric: '',
         designer: '',
         image_url: primaryImageUrl || '/assets/photo-week-1.jpg',
-        is_available: true
+        is_available: Number(formStock) > 0
       };
 
       if (editProduct) {

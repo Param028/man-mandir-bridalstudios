@@ -7,17 +7,25 @@ export const getProducts = async () => {
   const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false });
   if (error) throw error;
   // Map Supabase fields to frontend Product interface for backward compatibility
-  return data.map(p => ({
-    ...p,
-    _id: p.id,
-    name: p.title || p.name || 'Unnamed Product',
-    primaryImage: p.image_url || p.primaryImage || '/assets/photo-week-1.jpg',
-    secondaryImage: p.secondary_image_url || p.secondaryImage || p.image_url || '/assets/photo-week-2.jpg',
-    active: p.is_available ?? true,
-    sizes: p.size || p.sizes || [],
-    category_id: p.category_id,
-    subcategory_id: p.subcategory_id,
-  }));
+  return data.map(p => {
+    const rawSizes = p.size || p.sizes || [];
+    const stockStr = rawSizes.find((s: any) => typeof s === 'string' && s.startsWith('STOCK:'));
+    const stock_quantity = stockStr ? Number(stockStr.split(':')[1]) : (p.is_available ? 10 : 0);
+    const filteredSizes = rawSizes.filter((s: any) => typeof s !== 'string' || !s.startsWith('STOCK:'));
+
+    return {
+      ...p,
+      _id: p.id,
+      name: p.title || p.name || 'Unnamed Product',
+      primaryImage: p.image_url || p.primaryImage || '/assets/photo-week-1.jpg',
+      secondaryImage: p.secondary_image_url || p.secondaryImage || p.image_url || '/assets/photo-week-2.jpg',
+      active: p.is_available ?? true,
+      sizes: filteredSizes,
+      stock_quantity: stock_quantity,
+      category_id: p.category_id,
+      subcategory_id: p.subcategory_id,
+    };
+  });
 };
 
 export const createProduct = async (productData: any) => {
