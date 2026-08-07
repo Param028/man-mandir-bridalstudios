@@ -181,6 +181,12 @@ export default function AdminProductsPage() {
 
       <Tabs defaultValue={firstCategoryId} className="w-full">
         <TabsList className="bg-white border border-[#E5E0D8] rounded mb-6 flex-wrap h-auto p-1">
+          <TabsTrigger
+            value="all"
+            className="font-body text-sm data-[state=active]:text-[#C9A96E] data-[state=active]:bg-[#F5F0E8] rounded px-4 py-2 flex-1 md:flex-none"
+          >
+            All Products
+          </TabsTrigger>
           {categories.map((cat: any) => (
             <TabsTrigger
               key={cat.id}
@@ -195,8 +201,86 @@ export default function AdminProductsPage() {
           )}
         </TabsList>
 
+        {/* All Products Tab */}
+        <TabsContent value="all">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            <button
+              onClick={() => openAdd()}
+              className="border border-dashed border-[#E5E0D8] rounded p-6 flex flex-col items-center justify-center gap-3 min-h-[280px] hover:border-[#C9A96E] hover:bg-[rgba(201,169,110,0.03)] transition-all"
+            >
+              <Plus size={24} className="text-[#9B9590]" />
+              <span className="font-body text-sm text-[#6B6560]">Add Product</span>
+            </button>
+
+            <AnimatePresence>
+              {allProducts.map((product: any, i: number) => {
+                const imgSrc = product.primaryImage || product.images?.[0]?.url || product.image_url || ''
+                const subcat = allSubcategories.find((s: any) => s.id === product.subcategory_id)
+                const cat = categories.find((c: any) => c.id === product.category_id) || { name: product.category || 'Uncategorized' }
+                return (
+                  <motion.div
+                    key={product._id}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ delay: i * 0.05 }}
+                    className="bg-white border border-[#E5E0D8] rounded shadow-card overflow-hidden flex flex-col"
+                  >
+                    <div className="aspect-[3/4] overflow-hidden bg-[#F8F5F0] relative">
+                      {imgSrc ? (
+                        <img src={imgSrc} alt={product.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-[#D0C9C0]">
+                          <UploadCloud size={32} />
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-4 flex-1 flex flex-col">
+                      <p className="font-body text-sm font-medium text-[#2C2C2C] truncate">{product.name}</p>
+                      <div className="mt-1.5 flex flex-wrap gap-1">
+                        <span className="inline-block font-body text-[10px] px-2 py-0.5 rounded-sm bg-[#F5F0E8] text-[#6B6560]">
+                          {cat.name}
+                        </span>
+                        {subcat && (
+                          <span className="inline-block font-body text-[10px] px-2 py-0.5 rounded-sm bg-[rgba(201,169,110,0.12)] text-[#C9A96E]">
+                            {subcat.name}
+                          </span>
+                        )}
+                      </div>
+                      {product.price && (
+                        <p className="font-body text-xs text-[#6B6560] mt-auto pt-2">
+                          ₹{Number(product.price).toLocaleString('en-IN')}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-2 mt-3 pt-3 border-t border-[#F5F0E8]">
+                        <button
+                          onClick={() => openEdit(product)}
+                          className="flex-1 py-1.5 flex items-center justify-center gap-1 rounded hover:bg-[#F8F5F0] text-[#6B6560] hover:text-[#C9A96E] transition-colors text-xs"
+                        >
+                          <Edit3 size={14} /> Edit
+                        </button>
+                        <div className="w-px h-4 bg-[#E5E0D8]" />
+                        <button
+                          onClick={() => handleDelete(product._id)}
+                          className="flex-1 py-1.5 flex items-center justify-center gap-1 rounded hover:bg-[rgba(196,112,90,0.08)] text-[#6B6560] hover:text-[#C4705A] transition-colors text-xs"
+                        >
+                          <Trash2 size={14} /> Delete
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                )
+              })}
+            </AnimatePresence>
+          </div>
+        </TabsContent>
+
         {categories.map((cat: any) => {
-          const catProducts = allProducts.filter((p: any) => p.category_id === cat.id || (!p.category_id && p.category === cat.slug))
+          const catProducts = allProducts.filter((p: any) => 
+            p.category_id === cat.id || 
+            (!p.category_id && p.category && cat.slug && p.category.toLowerCase() === cat.slug.toLowerCase()) ||
+            (!p.category_id && p.category && cat.name && p.category.toLowerCase() === cat.name.toLowerCase())
+          )
           
           return (
             <TabsContent key={cat.id} value={cat.id}>
