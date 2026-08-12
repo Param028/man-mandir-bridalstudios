@@ -24,6 +24,7 @@ export const getProducts = async () => {
       stock_quantity: stock_quantity,
       category_id: p.category_id,
       subcategory_id: p.subcategory_id,
+      images: p.images || [],
     };
   });
 };

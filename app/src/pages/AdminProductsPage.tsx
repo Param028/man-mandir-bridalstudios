@@ -24,8 +24,7 @@ export default function AdminProductsPage() {
   const [formSizes, setFormSizes] = useState<string[]>([])
 
   // Image state
-  const [primaryFile, setPrimaryFile] = useState<File | null>(null)
-  const [primaryPreview, setPrimaryPreview] = useState<string>('')
+  const [images, setImages] = useState<{ file?: File; preview: string; isExisting?: boolean }[]>([])
 
   const [saving, setSaving] = useState(false)
   const primaryInputRef = useRef<HTMLInputElement>(null)
@@ -44,8 +43,7 @@ export default function AdminProductsPage() {
     setFormPrice('')
     setFormStock('10')
     setFormSizes([])
-    setPrimaryFile(null)
-    setPrimaryPreview('')
+    setImages([])
     setEditProduct(null)
   }
 
@@ -75,40 +73,61 @@ export default function AdminProductsPage() {
     }
     setFormSizes(existingSizes.filter(s => !s.startsWith('STOCK:')))
     
-    if (product.image_url) setPrimaryPreview(product.image_url)
-    else if (product.primaryImage) setPrimaryPreview(product.primaryImage)
-    else if (product.images?.[0]?.url) setPrimaryPreview(product.images[0].url)
+    let existingImages: string[] = [];
+    if (product.images && product.images.length > 0) {
+      existingImages = product.images.map((img: any) => typeof img === 'string' ? img : img.url);
+    } else if (product.image_url) {
+      existingImages = [product.image_url];
+    } else if (product.primaryImage) {
+      existingImages = [product.primaryImage];
+    }
+    setImages(existingImages.map(url => ({ preview: url, isExisting: true })));
     
     setShowModal(true)
   }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const preview = URL.createObjectURL(file)
-    setPrimaryFile(file)
-    setPrimaryPreview(preview)
+    const files = Array.from(e.target.files || [])
+    if (!files.length) return
+    const newImages = files.map(f => ({
+      file: f,
+      preview: URL.createObjectURL(f),
+      isExisting: false
+    }))
+    setImages(prev => [...prev, ...newImages])
+    // clear input value so the same file can be selected again
+    if (e.target) e.target.value = ''
+  }
+
+  const removeImage = (index: number) => {
+    setImages(prev => prev.filter((_, i) => i !== index))
   }
 
   const handleSave = async () => {
     if (!formName.trim()) return toast.error('Product name is required')
     if (!formPrice || isNaN(Number(formPrice))) return toast.error('Valid price is required')
     if (!formCategoryId) return toast.error('Category is required')
-    if (!editProduct && !primaryFile) return toast.error('Primary image is required')
+    if (!editProduct && images.length === 0) return toast.error('At least one image is required')
 
     setSaving(true)
     try {
-      let primaryImageUrl = editProduct?.image_url || editProduct?.images?.[0]?.url;
+      const uploadedImageUrls: string[] = [];
 
-      if (primaryFile) {
-        try {
-          primaryImageUrl = await uploadFile('products', primaryFile);
-        } catch (uploadErr: any) {
-          console.error('Image upload failed:', uploadErr);
-          toast.error('Image upload failed. Using placeholder URL.');
-          primaryImageUrl = '/assets/photo-week-1.jpg';
+      for (const img of images) {
+        if (img.isExisting) {
+          uploadedImageUrls.push(img.preview);
+        } else if (img.file) {
+          try {
+            const url = await uploadFile('products', img.file);
+            uploadedImageUrls.push(url);
+          } catch (uploadErr: any) {
+            console.error('Image upload failed:', uploadErr);
+            toast.error(`Image upload failed. Using placeholder URL.`);
+          }
         }
       }
+
+      const primaryImageUrl = uploadedImageUrls.length > 0 ? uploadedImageUrls[0] : '/assets/photo-week-1.jpg';
 
       const categoryObj = categories.find((c: any) => c.id === formCategoryId)
       const categorySlug = categoryObj ? categoryObj.slug : formCategoryId
@@ -131,7 +150,8 @@ export default function AdminProductsPage() {
         occasion: [],
         fabric: '',
         designer: '',
-        image_url: primaryImageUrl || '/assets/photo-week-1.jpg',
+        image_url: primaryImageUrl,
+        images: uploadedImageUrls,
         is_available: Number(formStock) > 0
       };
 
@@ -381,42 +401,45 @@ export default function AdminProductsPage() {
             </div>
             
             <div className="space-y-6">
-              {/* Primary Image */}
+              {/* Product Images */}
               <div>
                 <label className="font-body text-xs tracking-[0.1em] uppercase text-[#6B6560] block mb-2">
-                  Primary Image {!editProduct && '*'}
+                  Product Images {!editProduct && '*'}
                 </label>
                 <input
                   ref={primaryInputRef}
                   type="file"
+                  multiple
                   accept="image/jpeg,image/png,image/webp"
                   onChange={handleFileChange}
                   className="hidden"
                 />
-                <div
-                  onClick={() => primaryInputRef.current?.click()}
-                  className="border-2 border-dashed border-[#E5E0D8] rounded bg-[#F9F8F6] overflow-hidden hover:border-[#C9A96E] transition-colors cursor-pointer"
-                >
-                  {primaryPreview ? (
-                    <div className="relative aspect-[4/3] sm:aspect-[21/9]">
-                      <img src={primaryPreview} alt="Primary" className="w-full h-full object-cover" />
+                
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  {images.map((img, index) => (
+                    <div key={index} className="relative aspect-square border border-[#E5E0D8] rounded overflow-hidden group">
+                      <img src={img.preview} alt={`preview ${index}`} className="w-full h-full object-cover" />
                       <button
-                        onClick={(e) => { e.stopPropagation(); setPrimaryFile(null); setPrimaryPreview('') }}
-                        className="absolute top-2 right-2 w-8 h-8 bg-black/60 rounded-full flex items-center justify-center text-white hover:bg-black/80 transition-colors"
+                        onClick={(e) => { e.stopPropagation(); removeImage(index) }}
+                        className="absolute top-2 right-2 w-7 h-7 bg-black/60 rounded-full flex items-center justify-center text-white hover:bg-black/80 transition-colors opacity-0 group-hover:opacity-100"
                       >
                         <X size={14} />
                       </button>
-                      <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center text-white text-sm uppercase tracking-widest font-body">
-                        Change Image
-                      </div>
+                      {index === 0 && (
+                        <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[10px] uppercase tracking-wider text-center py-1">
+                          Primary
+                        </div>
+                      )}
                     </div>
-                  ) : (
-                    <div className="p-10 text-center">
-                      <UploadCloud size={32} className="text-[#C9A96E] mx-auto mb-3" />
-                      <p className="font-body text-sm text-[#2C2C2C]">Click to upload primary image</p>
-                      <p className="font-body text-[11px] text-[#9B9590] mt-1">JPG, PNG, WebP</p>
-                    </div>
-                  )}
+                  ))}
+                  
+                  <div
+                    onClick={() => primaryInputRef.current?.click()}
+                    className="aspect-square border-2 border-dashed border-[#E5E0D8] rounded bg-[#F9F8F6] hover:border-[#C9A96E] transition-colors cursor-pointer flex flex-col items-center justify-center p-4 text-center"
+                  >
+                    <UploadCloud size={24} className="text-[#C9A96E] mb-2" />
+                    <p className="font-body text-xs text-[#2C2C2C]">Add Image</p>
+                  </div>
                 </div>
               </div>
 
