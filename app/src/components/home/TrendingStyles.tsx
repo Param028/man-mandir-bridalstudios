@@ -1,39 +1,36 @@
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { ArrowRight } from 'lucide-react'
-
-const trendingItems = [
-  {
-    id: 1,
-    title: 'Embroidered Bridal Lehenga',
-    price: '₹1,85,000',
-    image: '/assets/photo-week-1.jpg',
-    href: '/products',
-  },
-  {
-    id: 2,
-    title: 'Silk Banarasi Saree',
-    price: '₹45,000',
-    image: '/assets/photo-week-2.jpg',
-    href: '/products',
-  },
-  {
-    id: 3,
-    title: 'Cocktail Gown with Sequins',
-    price: '₹78,000',
-    image: '/assets/photo-week-3.jpg',
-    href: '/products',
-  },
-  {
-    id: 4,
-    title: 'Indo Western Sharara Set',
-    price: '₹52,000',
-    image: '/assets/photo-week-4.jpg',
-    href: '/products',
-  },
-]
+import { useProducts } from '@/lib/api'
 
 export default function TrendingStyles() {
+  const { data: products = [], isLoading } = useProducts()
+  
+  // Get first 4 products for trending
+  const trendingItems = products.slice(0, 4)
+
+  const formatCurrency = (val: number) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0
+    }).format(val)
+  }
+
+  if (isLoading) {
+    return (
+      <section className="py-20 px-6 md:px-12 bg-[#F8F5F0]">
+        <div className="max-w-[1440px] mx-auto text-center">
+          <p className="font-body text-[#C9A96E]">Loading trending styles...</p>
+        </div>
+      </section>
+    )
+  }
+
+  if (trendingItems.length === 0) {
+    return null; // or you could return a fallback UI
+  }
+
   return (
     <section className="py-20 px-6 md:px-12 bg-[#F8F5F0]">
       <div className="max-w-[1440px] mx-auto">
@@ -56,28 +53,28 @@ export default function TrendingStyles() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {trendingItems.map((item, index) => (
+          {trendingItems.map((item: any, index: number) => (
             <motion.div
-              key={item.id}
+              key={item._id}
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6, delay: index * 0.1 }}
               className="group"
             >
-              <Link to={item.href}>
+              <Link to={`/products/${item._id}`}>
                 <div className="aspect-[3/4] overflow-hidden bg-[#EDE6DA] mb-4">
                   <img
-                    src={item.image}
-                    alt={item.title}
+                    src={item.primaryImage}
+                    alt={item.name}
                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                   />
                 </div>
                 <h3 className="font-body text-base text-[#2C2C2C] mb-1 line-clamp-2">
-                  {item.title}
+                  {item.name}
                 </h3>
                 <p className="font-body text-sm text-[#C9A96E] font-medium">
-                  {item.price}
+                  {item.price ? formatCurrency(item.price) : 'Price on request'}
                 </p>
               </Link>
             </motion.div>
