@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from '@/components/ui/sonner'
 import HomePage from '@/pages/HomePage'
 import GalleryPage from '@/pages/GalleryPage'
@@ -38,6 +38,7 @@ function App() {
         <Route path="/checkout" element={<CheckoutPage />} />
 
         {/* Admin Routes */}
+        <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
         <Route path="/admin/login" element={<AdminLoginPage />} />
         <Route element={<ProtectedRoute />}>
           <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
@@ -50,6 +51,9 @@ function App() {
           <Route path="/admin/payments" element={<AdminPaymentsPage />} />
           <Route path="/admin/settings" element={<AdminSettingsPage />} />
         </Route>
+
+        {/* Catch-all route */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       <Toaster position="top-right" richColors />
     </CartProvider>
