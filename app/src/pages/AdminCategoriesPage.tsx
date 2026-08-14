@@ -25,6 +25,7 @@ export default function AdminCategoriesPage() {
   const [formName, setFormName] = useState('')
   const [formSlug, setFormSlug] = useState('')
   const [formCategoryId, setFormCategoryId] = useState('')
+  const [formIsFeatured, setFormIsFeatured] = useState(false)
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string>('')
   const [saving, setSaving] = useState(false)
@@ -37,6 +38,7 @@ export default function AdminCategoriesPage() {
     setFormName('')
     setFormSlug('')
     setFormCategoryId('')
+    setFormIsFeatured(false)
     setFile(null)
     setPreview('')
     setEditItem(null)
@@ -57,6 +59,7 @@ export default function AdminCategoriesPage() {
     setEditItem(item)
     setFormName(item.name)
     setFormSlug(item.slug)
+    setFormIsFeatured(item.is_featured || false)
     if (type === 'subcategory') setFormCategoryId(item.category_id)
     if (item.cover_image) setPreview(item.cover_image)
     setShowModal(true)
@@ -95,6 +98,7 @@ export default function AdminCategoriesPage() {
         name: formName,
         slug: formSlug.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
         cover_image: coverImageUrl,
+        is_featured: mode === 'category' ? formIsFeatured : undefined,
         ...(mode === 'subcategory' ? { category_id: formCategoryId } : {})
       }
 
@@ -359,6 +363,20 @@ export default function AdminCategoriesPage() {
                         <option key={c.id} value={c.id}>{c.name}</option>
                       ))}
                     </select>
+                  </div>
+                )}
+
+                {mode === 'category' && (
+                  <div className="col-span-2 mt-2">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formIsFeatured}
+                        onChange={(e) => setFormIsFeatured(e.target.checked)}
+                        className="w-4 h-4 rounded border-[#E5E0D8] text-[#C9A96E] focus:ring-[#C9A96E]"
+                      />
+                      <span className="font-body text-sm text-[#2C2C2C]">Show in Shop by Occasion section</span>
+                    </label>
                   </div>
                 )}
               </div>

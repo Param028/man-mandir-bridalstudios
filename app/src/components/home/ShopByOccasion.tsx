@@ -5,8 +5,11 @@ import { useCategories } from '@/lib/api'
 export default function ShopByOccasion() {
   const { data: categories = [], isLoading } = useCategories()
 
-  // Get first 4 categories for occasions
-  const occasionItems = categories.slice(0, 4)
+  // Get explicitly marked featured categories, fallback to first 4 if none
+  const explicitlyFeatured = categories.filter((c: any) => c.is_featured)
+  const displayItems = explicitlyFeatured.length > 0 
+    ? explicitlyFeatured.slice(0, 4) 
+    : categories.slice(0, 4)
 
   if (isLoading) {
     return (
@@ -18,7 +21,7 @@ export default function ShopByOccasion() {
     )
   }
 
-  if (occasionItems.length === 0) {
+  if (displayItems.length === 0) {
     return null; // Handle empty state
   }
 
@@ -36,7 +39,7 @@ export default function ShopByOccasion() {
         </motion.h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {occasionItems.map((occasion: any, index: number) => (
+          {displayItems.map((occasion: any, index: number) => (
             <motion.div
               key={occasion.id}
               initial={{ opacity: 0, y: 30 }}

@@ -6,8 +6,11 @@ import { useProducts } from '@/lib/api'
 export default function TrendingStyles() {
   const { data: products = [], isLoading } = useProducts()
   
-  // Get first 4 products for trending
-  const trendingItems = products.slice(0, 4)
+  // Get explicitly marked trending products, fallback to first 4 if none
+  const explicitlyTrending = products.filter((p: any) => p.is_trending)
+  const displayItems = explicitlyTrending.length > 0 
+    ? explicitlyTrending.slice(0, 4) 
+    : products.slice(0, 4)
 
   const formatCurrency = (val: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -27,7 +30,7 @@ export default function TrendingStyles() {
     )
   }
 
-  if (trendingItems.length === 0) {
+  if (displayItems.length === 0) {
     return null; // or you could return a fallback UI
   }
 
@@ -53,7 +56,7 @@ export default function TrendingStyles() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {trendingItems.map((item: any, index: number) => (
+          {displayItems.map((item: any, index: number) => (
             <motion.div
               key={item._id}
               initial={{ opacity: 0, y: 30 }}

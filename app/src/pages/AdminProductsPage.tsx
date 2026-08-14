@@ -22,6 +22,7 @@ export default function AdminProductsPage() {
   const [formPrice, setFormPrice] = useState('')
   const [formStock, setFormStock] = useState('10')
   const [formSizes, setFormSizes] = useState<string[]>([])
+  const [formIsTrending, setFormIsTrending] = useState(false)
 
   // Image state
   const [images, setImages] = useState<{ file?: File; preview: string; isExisting?: boolean }[]>([])
@@ -43,6 +44,7 @@ export default function AdminProductsPage() {
     setFormPrice('')
     setFormStock('10')
     setFormSizes([])
+    setFormIsTrending(false)
     setImages([])
     setEditProduct(null)
   }
@@ -62,16 +64,17 @@ export default function AdminProductsPage() {
     setFormSubcategoryId(product.subcategory_id || '')
     setFormDesc(product.description || '')
     setFormPrice(String(product.price || ''))
+    setFormIsTrending(product.is_trending || false)
     const existingSizes: string[] = (product.size || product.sizes || []).map((s: any) =>
       typeof s === 'string' ? s : String(s.size || s)
     )
-    const stockSize = existingSizes.find(s => s.startsWith('STOCK:'))
+    const stockSize = existingSizes.find((s: string) => s.startsWith('STOCK:'))
     if (stockSize) {
       setFormStock(stockSize.split(':')[1])
     } else {
       setFormStock(product.is_available ? '10' : '0')
     }
-    setFormSizes(existingSizes.filter(s => !s.startsWith('STOCK:')))
+    setFormSizes(existingSizes.filter((s: string) => !s.startsWith('STOCK:')))
     
     let existingImages: string[] = [];
     if (product.images && product.images.length > 0) {
@@ -144,6 +147,7 @@ export default function AdminProductsPage() {
         subcategory_id: formSubcategoryId || null,
         description: formDesc.trim(),
         price: Number(formPrice),
+        is_trending: formIsTrending,
         material: '',
         color: '',
         size: sizePayload,
@@ -508,6 +512,19 @@ export default function AdminProductsPage() {
                     placeholder="10"
                   />
                 </div>
+              </div>
+
+              {/* Trending */}
+              <div>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formIsTrending}
+                    onChange={(e) => setFormIsTrending(e.target.checked)}
+                    className="w-4 h-4 rounded border-[#E5E0D8] text-[#C9A96E] focus:ring-[#C9A96E]"
+                  />
+                  <span className="font-body text-sm text-[#2C2C2C]">Show in Trending Styles section</span>
+                </label>
               </div>
 
               {/* Description */}
