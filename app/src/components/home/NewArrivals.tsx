@@ -2,15 +2,14 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import ProductCard from './ProductCard'
 import ProductDetailDialog from './ProductDetailDialog'
-import { useProducts } from '@/lib/api'
+import { usePublicProducts } from '@/lib/api'
 import type { Product } from '@/lib/data'
-import { Loader2 } from 'lucide-react'
 
 export default function NewArrivals() {
   const [showModal, setShowModal] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
 
-  const { data: products = [], isLoading } = useProducts()
+  const { data: products = [], isLoading } = usePublicProducts()
 
   // Filter active new arrivals
   const newArrivals = products.filter((p: any) => p.active && p.isNew)
@@ -20,15 +19,7 @@ export default function NewArrivals() {
     setShowModal(true)
   }
 
-  if (isLoading) {
-    return (
-      <div className="bg-white py-24 flex items-center justify-center">
-        <Loader2 className="animate-spin text-[#C9A96E]" size={28} />
-      </div>
-    )
-  }
-
-  if (newArrivals.length === 0) return null
+  if (isLoading || newArrivals.length === 0) return null
 
   return (
     <section id="new-arrivals" className="bg-white py-24 md:py-32 lg:py-36">

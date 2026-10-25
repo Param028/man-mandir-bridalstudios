@@ -1,58 +1,66 @@
-import { motion } from 'framer-motion'
+import { usePublicSiteSettings } from '@/lib/siteSettings'
+
+type CraftsmanshipContent = {
+  title?: string
+  paragraphs?: string[]
+  body?: string
+  image_url?: string
+}
+
+type Stat = { label: string; value: string | number }
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === 'object' && !Array.isArray(value))
+}
+
+function normalizeStats(value: unknown): Stat[] {
+  if (Array.isArray(value)) {
+    return value.filter((item): item is Stat =>
+      isRecord(item) && typeof item.label === 'string' && (typeof item.value === 'string' || typeof item.value === 'number')
+    )
+  }
+  if (isRecord(value)) {
+    return Object.entries(value)
+      .filter(([, stat]) => isRecord(stat) && typeof stat.label === 'string' && (typeof stat.value === 'string' || typeof stat.value === 'number'))
+      .map(([, stat]) => stat as Stat)
+  }
+  return []
+}
 
 export default function CraftsmanshipHeritage() {
-  return (
-    <section className="py-20 px-6 md:px-12 bg-[#F8F5F0]">
-      <div className="max-w-[1440px] mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-          <motion.div
-            initial={{ opacity: 0, x: -30 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-          >
-            <h2 className="font-display text-4xl md:text-5xl text-[#2C2C2C] tracking-[0.06em] mb-6">
-              Craftsmanship & Heritage
-            </h2>
-            <div className="space-y-4 text-[#6B6560] font-body leading-relaxed">
-              <p>
-                At ManMandir, every piece is a testament to India's rich textile heritage. Our artisans bring generations of expertise to create exquisite bridal couture that blends traditional craftsmanship with contemporary elegance.
-              </p>
-              <p>
-                From intricate zardozi work to delicate hand embroidery, each garment tells a story of dedication and artistry. We source the finest fabrics from across the country - Banarasi silk from Varanasi, Chanderi from Madhya Pradesh, and pure georgette from Rajasthan.
-              </p>
-              <p>
-                Our commitment to preserving traditional techniques while embracing modern design sensibilities has made us a trusted name for brides who seek authenticity without compromising on style.
-              </p>
-            </div>
-            <div className="mt-8 grid grid-cols-2 gap-6">
-              <div>
-                <h3 className="font-display text-3xl text-[#C9A96E] mb-2">25+</h3>
-                <p className="font-body text-sm text-[#6B6560]">Years of Heritage</p>
-              </div>
-              <div>
-                <h3 className="font-display text-3xl text-[#C9A96E] mb-2">150+</h3>
-                <p className="font-body text-sm text-[#6B6560]">Master Artisans</p>
-              </div>
-            </div>
-          </motion.div>
+  const { data: settings } = usePublicSiteSettings()
+  const raw = settings?.craftsmanship
+  const content = isRecord(raw) ? raw as CraftsmanshipContent : null
+  const paragraphs = Array.isArray(content?.paragraphs)
+    ? content.paragraphs.filter((text): text is string => typeof text === 'string' && text.trim().length > 0)
+    : typeof content?.body === 'string' && content.body.trim()
+      ? [content.body]
+      : []
+  const stats = normalizeStats(settings?.stats)
+  const title = typeof content?.title === 'string' ? content.title.trim() : ''
 
-          <motion.div
-            initial={{ opacity: 0, x: 30 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="relative"
-          >
-            <div className="aspect-[4/5] bg-[#EDE6DA] overflow-hidden">
-              <img
-                src="/assets/photo-week-1.jpg"
-                alt="Craftsmanship"
-                className="w-full h-full object-cover"
-              />
+  if (!title && paragraphs.length === 0 && stats.length === 0) return null
+
+  return (
+    <section className="bg-[#F8F5F0] px-6 py-20 md:px-12">
+      <div className="mx-auto max-w-[1440px]">
+        <div className="mx-auto max-w-4xl">
+          {title && <h2 className="mb-6 font-display text-4xl tracking-[0.04em] text-[#2C2C2C] md:text-5xl">{title}</h2>}
+          {paragraphs.length > 0 && (
+            <div className="space-y-4 font-body leading-relaxed text-[#514B46]">
+              {paragraphs.map((paragraph, index) => <p key={`${index}-${paragraph.slice(0, 16)}`}>{paragraph}</p>)}
             </div>
-            <div className="absolute -bottom-6 -left-6 w-48 h-48 border-2 border-[#C9A96E] -z-10" />
-          </motion.div>
+          )}
+          {stats.length > 0 && (
+            <dl className="mt-8 grid grid-cols-2 gap-6 border-t border-[#DDD6CC] pt-6 sm:grid-cols-3">
+              {stats.map((stat, index) => (
+                <div key={`${stat.label}-${index}`}>
+                  <dt className="font-body text-sm text-[#514B46]">{stat.label}</dt>
+                  <dd className="mt-1 font-display text-3xl text-[#8C7045]">{stat.value}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
         </div>
       </div>
     </section>

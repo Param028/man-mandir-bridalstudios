@@ -3,6 +3,7 @@ import { X, Phone, MessageCircle, Mail, Ruler } from 'lucide-react'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { Product } from '@/lib/data'
+import { usePublicSiteSettings } from '@/lib/siteSettings'
 
 interface SizeGuideModalProps {
   product: Product | null
@@ -32,6 +33,11 @@ export default function SizeGuideModal({
   const [activeTab, setActiveTab] = useState<'guide' | 'measure'>('guide')
   const [localSize, setLocalSize] = useState(currentSelectedSize)
   const [unit, setUnit] = useState<'in' | 'cm'>('in')
+  const { data: siteSettings } = usePublicSiteSettings()
+  const footerSettings = siteSettings?.footer && typeof siteSettings.footer === 'object' ? siteSettings.footer as Record<string, unknown> : {}
+  const supportPhone = typeof footerSettings.phone === 'string' ? footerSettings.phone.trim() : ''
+  const supportEmail = typeof footerSettings.email === 'string' ? footerSettings.email.trim() : ''
+  const supportPhoneDigits = supportPhone.replace(/[^+\d]/g, '').replace(/^\+/, '')
 
   useEffect(() => {
     if (open) {
@@ -196,32 +202,32 @@ export default function SizeGuideModal({
                   </div>
 
                   {/* Right: Contact Support Card */}
-                  <div className="w-full lg:w-72 bg-[#F8F5F0] border border-[#E5E0D8] rounded p-6 flex flex-col justify-center text-center">
+                  {(supportPhone || supportEmail) && <div className="w-full lg:w-72 bg-[#F8F5F0] border border-[#E5E0D8] rounded p-6 flex flex-col justify-center text-center">
                     <h4 className="font-display text-lg text-[#2C2C2C] mb-2">Need help with sizing?</h4>
                     <p className="font-body text-xs text-[#6B6560] mb-5">
-                      Our bridal stylists are here to assist you with custom measurements and fit queries.
+                      Contact the studio using its published details.
                     </p>
                     <div className="space-y-3">
-                      <a href="tel:+919876543210" className="flex items-center gap-3 text-[#2C2C2C] hover:text-[#C9A96E] transition-colors group">
+                      {supportPhone && <a href={`tel:${supportPhone.replace(/[^+\d]/g, '')}`} className="flex items-center gap-3 text-[#2C2C2C] hover:text-[#6B4F1D] transition-colors group">
                         <div className="w-8 h-8 rounded-full bg-white border border-[#E5E0D8] flex items-center justify-center group-hover:border-[#C9A96E]">
                           <Phone size={14} />
                         </div>
-                        <span className="font-body text-xs font-semibold">+91 98765 43210</span>
-                      </a>
-                      <a href="https://wa.me/919876543210" target="_blank" rel="noreferrer" className="flex items-center gap-3 text-[#2C2C2C] hover:text-[#4A8C6F] transition-colors group">
+                        <span className="font-body text-xs font-semibold">{supportPhone}</span>
+                      </a>}
+                      {supportPhoneDigits && <a href={`https://wa.me/${supportPhoneDigits}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 text-[#2C2C2C] hover:text-[#3F7455] transition-colors group">
                         <div className="w-8 h-8 rounded-full bg-white border border-[#E5E0D8] flex items-center justify-center group-hover:border-[#4A8C6F]">
                           <MessageCircle size={14} />
                         </div>
                         <span className="font-body text-xs font-semibold">WhatsApp Us</span>
-                      </a>
-                      <a href="mailto:support@manmandir.com" className="flex items-center gap-3 text-[#2C2C2C] hover:text-[#C9A96E] transition-colors group">
+                      </a>}
+                      {supportEmail && <a href={`mailto:${supportEmail}`} className="flex items-center gap-3 text-[#2C2C2C] hover:text-[#6B4F1D] transition-colors group">
                         <div className="w-8 h-8 rounded-full bg-white border border-[#E5E0D8] flex items-center justify-center group-hover:border-[#C9A96E]">
                           <Mail size={14} />
                         </div>
                         <span className="font-body text-xs font-semibold">Email Support</span>
-                      </a>
+                      </a>}
                     </div>
-                  </div>
+                  </div>}
                 </div>
 
                 {/* Size Table Section */}

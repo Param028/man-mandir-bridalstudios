@@ -1,257 +1,146 @@
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { UploadCloud, Trash2, ChevronLeft, Loader2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
-import { useState, useRef, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
-import { uploadFile } from '@/lib/api'
+import { uploadWithSignedUrl } from '@/lib/api'
 
 interface GalleryItem {
-  _id: string
+  id: string
   url: string
-  caption: string
+  caption: string | null
   type: 'image' | 'video'
-  uploadedAt: string
+  created_at: string
 }
 
 interface PhotoOfWeek {
-  _id: string
-  title: string
-  thumbnail: string
+  id: string
+  image_url: string
+  caption: string | null
+  galleries?: { name?: string | null; description?: string | null } | null
 }
+
+const MAX_MEDIA_BYTES = 50 * 1024 * 1024
 
 export default function AdminGalleryManagerPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const fileInputRef = useRef<HTMLInputElement>(null)
-
   const [photo, setPhoto] = useState<PhotoOfWeek | null>(null)
   const [items, setItems] = useState<GalleryItem[]>([])
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     if (!id) return
     try {
       setLoading(true)
-      const [photoRes, galleryRes] = await Promise.all([
-        supabase.from('photos_of_week').select('*').eq('id', id).maybeSingle(),
-        supabase.from('gallery_items').select('*').eq('photo_of_the_week_id', id).order('created_at', { ascending: false }),
+      const [photoResult, galleryResult] = await Promise.all([
+        supabase.from('photos_of_week').select('id,image_url,caption,is_active,galleries(name,description)').eq('id', id).maybeSingle(),
+        supabase.from('gallery_items').select('id,url,caption,media_type,created_at').eq('photo_of_the_week_id', id).order('created_at', { ascending: false }),
       ])
-      
-      if (photoRes.error) throw photoRes.error;
-      if (galleryRes.error) throw galleryRes.error;
-
-      if (photoRes.data) {
-        setPhoto({ ...photoRes.data, _id: photoRes.data.id })
-      }
-      setItems(galleryRes.data.map((item: any) => ({ ...item, _id: item.id })))
-    } catch (err: any) {
-      toast.error('Failed to load gallery')
+      if (photoResult.error) throw photoResult.error
+      if (galleryResult.error) throw galleryResult.error
+      setPhoto(photoResult.data as PhotoOfWeek | null)
+      setItems((galleryResult.data ?? []).map((item: any) => ({ ...item, type: item.media_type === 'video' ? 'video' : 'image' })))
+    } catch (error) {
+      console.error('Unable to load gallery media:', error)
+      toast.error('Gallery could not be loaded. Check admin access and try again.')
     } finally {
       setLoading(false)
     }
-  }
-
-  useEffect(() => {
-    fetchData()
   }, [id])
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files
-    if (!files || files.length === 0 || !id) return
+  useEffect(() => { void fetchData() }, [fetchData])
+
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? [])
+    if (files.length === 0 || !id) return
+    const supported = new Set(['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/webm'])
+    const invalid = files.find((file) => !supported.has(file.type) || file.size > MAX_MEDIA_BYTES)
+    if (invalid) {
+      toast.error('Choose JPG, PNG, WebP, MP4 or WebM files no larger than 50 MB each.')
+      event.target.value = ''
+      return
+    }
 
     setUploading(true)
     setUploadProgress(0)
-
-    const formData = new FormData()
-    Array.from(files).forEach((file) => formData.append('files', file))
-    formData.append('photoOfTheWeekId', id)
-
     try {
-      const newItems: any[] = [];
-      const fileArray = Array.from(files);
-      
-      for (let i = 0; i < fileArray.length; i++) {
-        const file = fileArray[i];
-        const fileUrl = await uploadFile('gallery', file);
-        
-        const newItem = {
+      const newItems: GalleryItem[] = []
+      for (let index = 0; index < files.length; index += 1) {
+        const file = files[index]
+        const fileUrl = await uploadWithSignedUrl('gallery', file)
+        const { data, error } = await supabase.from('gallery_items').insert({
           photo_of_the_week_id: id,
           url: fileUrl,
-          media_type: file.type.startsWith('video') ? 'video' : 'image',
-          caption: ''
-        };
-        
-        const { data, error } = await supabase.from('gallery_items').insert([newItem]).select().single();
-        if (error) throw error;
-        
-        newItems.push({ ...data, _id: data.id, type: data.media_type });
-        setUploadProgress(Math.round(((i + 1) / fileArray.length) * 100));
+          media_type: file.type.startsWith('video/') ? 'video' : 'image',
+          caption: '',
+        }).select('id,url,caption,media_type,created_at').single()
+        if (error) throw error
+        newItems.unshift({ ...data, type: data.media_type === 'video' ? 'video' : 'image' })
+        setUploadProgress(Math.round(((index + 1) / files.length) * 100))
       }
-
-      setItems((prev) => [...newItems, ...prev])
-      toast.success(`${newItems.length} file(s) uploaded!`)
-    } catch (err: any) {
-      toast.error(err.message || 'Upload failed')
+      setItems((current) => [...newItems, ...current])
+      toast.success(`${newItems.length} media item${newItems.length === 1 ? '' : 's'} added`)
+    } catch (error) {
+      console.error('Unable to upload gallery media:', error)
+      toast.error(error instanceof Error ? error.message : 'Media upload failed. Verify admin access and storage configuration.')
     } finally {
       setUploading(false)
       setUploadProgress(0)
-      // Reset file input
       if (fileInputRef.current) fileInputRef.current.value = ''
     }
   }
 
-  const handleDelete = async (itemId: string) => {
-    if (!confirm('Delete this image/video?')) return
+  const handleDelete = async (item: GalleryItem) => {
+    if (!window.confirm('Delete this media record from the gallery?')) return
     try {
-      const { error } = await supabase.from('gallery_items').delete().eq('id', itemId);
-      if (error) throw error;
-      setItems((prev) => prev.filter((item) => item._id !== itemId))
-      toast.success('Deleted')
-    } catch (err: any) {
-      toast.error(err.message || 'Delete failed')
+      const { error } = await supabase.from('gallery_items').delete().eq('id', item.id)
+      if (error) throw error
+      setItems((current) => current.filter((entry) => entry.id !== item.id))
+      toast.success('Gallery item removed')
+    } catch (error) {
+      console.error('Unable to remove gallery item:', error)
+      toast.error('Gallery item could not be removed.')
     }
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 size={28} className="animate-spin text-[#C9A96E]" />
-      </div>
-    )
-  }
+  if (loading) return <div className="flex items-center justify-center py-20"><Loader2 size={28} className="animate-spin text-[#8C7045]" /></div>
+  if (!photo) return <div className="py-20 text-center"><p className="font-body text-[#514B46]">Collection not found.</p><button onClick={() => navigate('/admin/photos-of-week')} className="mt-4 font-body text-sm text-[#6B4F1D] underline">Back to photos</button></div>
 
-  if (!photo) {
-    return (
-      <div className="text-center py-20">
-        <p className="font-body text-[#6B6560]">Collection not found</p>
-        <button onClick={() => navigate('/admin/photos-of-week')} className="text-[#C9A96E] hover:underline font-body text-sm mt-4">
-          ← Back
-        </button>
-      </div>
-    )
-  }
+  const title = photo.galleries?.name || photo.caption || 'Gallery'
 
   return (
     <div className="space-y-6">
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-2 font-body text-sm text-[#6B6560]">
-        <button
-          onClick={() => navigate('/admin/photos-of-week')}
-          className="text-[#C9A96E] hover:underline flex items-center gap-1"
-        >
-          <ChevronLeft size={14} /> Photos of the Week
-        </button>
-        <span>›</span>
-        <span className="text-[#2C2C2C]">{photo.title}</span>
+      <div className="flex items-center gap-2 font-body text-sm text-[#514B46]">
+        <button onClick={() => navigate('/admin/photos-of-week')} className="inline-flex items-center gap-1 text-[#6B4F1D] underline underline-offset-2"><ChevronLeft size={14} /> Photos of the Week</button>
+        <span aria-hidden="true">›</span><span className="text-[#2C2C2C]">{title}</span>
+      </div>
+      <div className="flex flex-wrap items-start gap-5">
+        <img src={photo.image_url} alt={photo.caption || title} className="h-28 w-24 bg-[#F5F0E8] object-cover" />
+        <div><h2 className="font-display text-xl text-[#2C2C2C]">{title} — Gallery</h2><p className="mt-1 font-body text-sm text-[#514B46]">{items.length} media item{items.length === 1 ? '' : 's'}</p></div>
       </div>
 
-      <div>
-        <h2 className="font-body text-lg font-medium text-[#2C2C2C]">{photo.title} — Gallery</h2>
-        <p className="font-body text-sm text-[#6B6560]">
-          {items.length} {items.length === 1 ? 'item' : 'items'} · Upload images and videos for this collection
-        </p>
-      </div>
+      <input ref={fileInputRef} type="file" multiple accept="image/jpeg,image/png,image/webp,video/mp4,video/webm" onChange={(event) => void handleFileSelect(event)} className="sr-only" aria-label="Choose gallery images or videos" />
+      <button type="button" disabled={uploading} onClick={() => fileInputRef.current?.click()} className={`w-full border border-dashed bg-white p-8 text-center transition-colors ${uploading ? 'cursor-wait border-[#8C7045]' : 'border-[#D0C9C0] hover:border-[#8C7045]'}`}>
+        {uploading ? <><Loader2 size={28} className="mx-auto mb-3 animate-spin text-[#8C7045]" /><span className="font-body text-sm text-[#514B46]">Uploading selected media… {uploadProgress}%</span></> : <><UploadCloud size={34} className="mx-auto mb-3 text-[#8C7045]" /><span className="block font-body text-sm text-[#514B46]">Add images or videos to this gallery</span><span className="mt-1 block font-body text-xs text-[#514B46]">JPG, PNG, WebP, MP4 or WebM. Maximum 50 MB per file.</span></>}
+      </button>
 
-      {/* Upload Zone */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        multiple
-        accept="image/jpeg,image/png,image/webp,video/mp4,video/webm"
-        onChange={handleFileSelect}
-        className="hidden"
-      />
-      <div
-        onClick={() => !uploading && fileInputRef.current?.click()}
-        className={`bg-white border border-dashed rounded p-8 text-center transition-all duration-200 ${
-          uploading ? 'border-[#C9A96E] cursor-wait' : 'border-[#E5E0D8] hover:border-[#C9A96E] hover:bg-[rgba(201,169,110,0.02)] cursor-pointer'
-        }`}
-      >
-        {uploading ? (
-          <div className="space-y-3">
-            <Loader2 size={32} className="animate-spin text-[#C9A96E] mx-auto" />
-            <p className="font-body text-sm text-[#6B6560]">Uploading...</p>
-            <div className="max-w-[200px] mx-auto">
-              <div className="w-full h-1.5 bg-[#E5E0D8] rounded overflow-hidden">
-                <div
-                  className="h-full bg-[#C9A96E] transition-all duration-300"
-                  style={{ width: `${uploadProgress}%` }}
-                />
-              </div>
-              <p className="font-body text-xs text-[#9B9590] mt-1">{uploadProgress}%</p>
-            </div>
-          </div>
-        ) : (
-          <>
-            <UploadCloud size={36} className="text-[#9B9590] mx-auto mb-3" />
-            <p className="font-body text-sm text-[#6B6560]">Drag and drop files here, or click to browse</p>
-            <p className="font-body text-xs text-[#9B9590] mt-1">
-              Images: JPG, PNG, WebP (max 50MB) · Videos: MP4, WebM (max 50MB)
-            </p>
-          </>
-        )}
-      </div>
-
-      {/* Empty gallery */}
-      {items.length === 0 && !loading && (
-        <div className="text-center py-10 border border-dashed border-[#E5E0D8] rounded">
-          <p className="font-body text-sm text-[#9B9590]">No images yet. Upload some files above.</p>
-        </div>
-      )}
-
-      {/* Media Grid */}
+      {items.length === 0 && <div className="border border-dashed border-[#D0C9C0] py-10 text-center font-body text-sm text-[#514B46]">No gallery media has been added.</div>}
       <AnimatePresence>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-          {items.map((item, i) => (
-            <motion.div
-              key={item._id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ delay: i * 0.04 }}
-              className="group relative rounded overflow-hidden bg-white border border-[#E5E0D8]"
-            >
-              <div className="relative aspect-[4/5]">
-                {item.type === 'video' ? (
-                  <video
-                    src={item.url}
-                    className="w-full h-full object-cover"
-                    muted
-                    onMouseOver={(e) => (e.currentTarget as HTMLVideoElement).play()}
-                    onMouseOut={(e) => (e.currentTarget as HTMLVideoElement).pause()}
-                  />
-                ) : (
-                  <img
-                    src={item.url}
-                    alt={item.caption || ''}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src =
-                        'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="%23E5E0D8"/></svg>'
-                    }}
-                  />
-                )}
-                <span className="absolute top-2 right-2 bg-[rgba(26,26,26,0.7)] text-white text-[10px] font-body px-2 py-0.5 rounded uppercase">
-                  {item.type}
-                </span>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+          {items.map((item, index) => (
+            <motion.article key={item.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ delay: index * 0.025 }} className="group relative overflow-hidden border border-[#E5E0D8] bg-white">
+              <div className="relative aspect-[4/5] bg-[#F5F0E8]">
+                {item.type === 'video' ? <video src={item.url} className="h-full w-full object-cover" muted playsInline preload="metadata" controls /> : <img src={item.url} alt={item.caption || ''} className="h-full w-full object-cover" loading="lazy" />}
+                <span className="absolute right-2 top-2 bg-[#2C2C2C]/80 px-2 py-0.5 font-body text-[10px] uppercase text-white">{item.type}</span>
+                <button type="button" onClick={() => void handleDelete(item)} aria-label={`Delete ${item.type} from gallery`} className="absolute left-2 top-2 flex h-8 w-8 items-center justify-center bg-white text-[#B14F42] opacity-90 hover:bg-[#FFF4F1]"><Trash2 size={14} /></button>
               </div>
-              {item.caption && (
-                <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                  <p className="font-body text-[12px] text-white truncate">{item.caption}</p>
-                </div>
-              )}
-              {/* Delete button */}
-              <button
-                onClick={() => handleDelete(item._id)}
-                className="absolute top-2 left-2 w-7 h-7 flex items-center justify-center bg-white/90 rounded opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50"
-                title="Delete"
-              >
-                <Trash2 size={12} className="text-[#C4705A]" />
-              </button>
-            </motion.div>
+              {item.caption && <p className="p-2 font-body text-xs text-[#514B46]">{item.caption}</p>}
+            </motion.article>
           ))}
         </div>
       </AnimatePresence>

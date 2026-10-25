@@ -12,7 +12,7 @@ export default function Home() {
           count is {count}
         </button>
         <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
+          Explore the latest bridal collections and discover your signature look.
         </p>
       </div>
     </>

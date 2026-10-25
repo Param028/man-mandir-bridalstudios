@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowRight, ChevronLeft, Loader2 } from 'lucide-react'
+import { ArrowRight, ChevronLeft } from 'lucide-react'
 import { useCategories, useSubcategories } from '@/lib/api'
 
 export default function ShopByStyle() {
@@ -12,15 +12,7 @@ export default function ShopByStyle() {
 
   const isLoading = loadingCat || loadingSub
 
-  // Fallback to static styles if API fails or no categories yet
-  const fallbackStyles = [
-    { id: '1', name: 'Bridal Lehengas', cover_image: '/assets/photo-week-1.jpg', slug: 'lehengas' },
-    { id: '2', name: 'Cocktail Gowns', cover_image: '/assets/photo-week-2.jpg', slug: 'cocktail' },
-    { id: '3', name: 'Sarees', cover_image: '/assets/photo-week-3.jpg', slug: 'sarees' },
-    { id: '4', name: 'Indo Western', cover_image: '/assets/photo-week-4.jpg', slug: 'indo-western' },
-  ]
-
-  const displayCategories = categories.length > 0 ? categories : fallbackStyles
+  const displayCategories = categories.filter((category: any) => category.is_active !== false && category.name?.trim())
 
   const handleCategoryClick = (categoryId: string) => {
     const subcats = allSubcategories.filter((s: any) => s.category_id === categoryId)
@@ -37,16 +29,10 @@ export default function ShopByStyle() {
     ? allSubcategories.filter((s: any) => s.category_id === selectedCategoryId)
     : []
 
-  if (isLoading) {
-    return (
-      <section className="py-20 px-6 md:px-12 bg-[#F5F0E8] min-h-[400px] flex items-center justify-center">
-        <Loader2 size={32} className="animate-spin text-[#C9A96E]" />
-      </section>
-    )
-  }
+  if (isLoading || displayCategories.length === 0) return null
 
   return (
-    <section className="py-20 px-6 md:px-12 bg-[#F5F0E8] overflow-hidden">
+    <section id="shop-style" className="py-20 px-6 md:px-12 bg-[#F5F0E8] overflow-hidden">
       <div className="max-w-[1440px] mx-auto relative">
         <div className="flex items-center justify-between mb-12">
           <motion.div
@@ -96,11 +82,7 @@ export default function ShopByStyle() {
                   onClick={() => handleCategoryClick(style.id)}
                 >
                   <div className="aspect-[3/4] overflow-hidden bg-[#E5E0D8]">
-                    <img
-                      src={style.cover_image || '/assets/photo-week-1.jpg'}
-                      alt={style.name}
-                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                    />
+                    {style.cover_image && <img src={style.cover_image} alt={style.name} loading="lazy" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />}
                   </div>
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                   <div className="absolute bottom-0 left-0 right-0 p-6">
@@ -134,11 +116,7 @@ export default function ShopByStyle() {
                 >
                   <Link to={`/products?category=${selectedCategoryId}&subcategory=${sub.id}`}>
                     <div className="aspect-[3/4] overflow-hidden bg-[#E5E0D8]">
-                      <img
-                        src={sub.cover_image || '/assets/photo-week-2.jpg'}
-                        alt={sub.name}
-                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                      />
+                      {sub.cover_image && <img src={sub.cover_image} alt={sub.name} loading="lazy" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />}
                     </div>
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                     <div className="absolute bottom-0 left-0 right-0 p-6">

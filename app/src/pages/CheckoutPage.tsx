@@ -341,10 +341,10 @@ export default function CheckoutPage() {
 
               <div className="bg-white border border-[#E5E0D8] rounded-lg p-6 space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {field('name', 'Full Name', 'text', 'Priya Sharma')}
-                  {field('phone', 'Mobile Number', 'tel', '9876543210')}
+                  {field('name', 'Full Name', 'text', 'Your full name')}
+                  {field('phone', 'Mobile Number', 'tel', '10-digit mobile number')}
                 </div>
-                {field('email', 'Email Address', 'email', 'priya@example.com')}
+                {field('email', 'Email Address', 'email', 'you@domain.com')}
                 {field('address', 'Street Address', 'text', 'House No., Street, Area')}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   {field('city', 'City', 'text', 'Mumbai')}

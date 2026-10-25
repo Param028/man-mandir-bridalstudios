@@ -6,6 +6,7 @@ import BookingPage from '@/pages/BookingPage'
 import BookingSuccessPage from '@/pages/BookingSuccessPage'
 import ProductsPage from '@/pages/ProductsPage'
 import CheckoutPage from '@/pages/CheckoutPage'
+import PrivacyPolicyPage from '@/pages/PrivacyPolicyPage'
 import LehengasPage from '@/pages/LehengasPage'
 import SareesPage from '@/pages/SareesPage'
 import BridalPage from '@/pages/BridalPage'
@@ -19,6 +20,9 @@ import AdminCategoriesPage from '@/pages/AdminCategoriesPage'
 import AdminBookingsPage from '@/pages/AdminBookingsPage'
 import AdminPaymentsPage from '@/pages/AdminPaymentsPage'
 import AdminSettingsPage from '@/pages/AdminSettingsPage'
+import AdminSalesPage from '@/pages/AdminSalesPage'
+import AdminStoresPage from '@/pages/AdminStoresPage'
+import AdminReviewsPage from '@/pages/AdminReviewsPage'
 import ProtectedRoute from '@/components/admin/ProtectedRoute'
 import { CartProvider } from '@/lib/cartContext'
 
@@ -36,6 +40,7 @@ function App() {
         <Route path="/book-appointment" element={<BookingPage />} />
         <Route path="/booking/success" element={<BookingSuccessPage />} />
         <Route path="/checkout" element={<CheckoutPage />} />
+        <Route path="/privacy" element={<PrivacyPolicyPage />} />
 
         {/* Admin Routes */}
         <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
@@ -49,6 +54,9 @@ function App() {
           <Route path="/admin/categories" element={<AdminCategoriesPage />} />
           <Route path="/admin/bookings" element={<AdminBookingsPage />} />
           <Route path="/admin/payments" element={<AdminPaymentsPage />} />
+          <Route path="/admin/sales" element={<AdminSalesPage />} />
+          <Route path="/admin/reviews" element={<AdminReviewsPage />} />
+          <Route path="/admin/stores" element={<AdminStoresPage />} />
           <Route path="/admin/settings" element={<AdminSettingsPage />} />
         </Route>
 
