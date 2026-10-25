@@ -8,18 +8,22 @@ export const getProducts = async () => {
   if (error) throw error;
   // Map Supabase fields to frontend Product interface for backward compatibility
   return data.map(p => {
-    const rawSizes = p.size || p.sizes || [];
+    const rawSizeValue = p.size || p.sizes || [];
+    const rawSizes = Array.isArray(rawSizeValue) ? rawSizeValue : typeof rawSizeValue === 'string' ? [rawSizeValue] : [];
     const stockStr = rawSizes.find((s: any) => typeof s === 'string' && s.startsWith('STOCK:'));
-    const stock_quantity = stockStr ? Number(stockStr.split(':')[1]) : (p.is_available ? 10 : 0);
+    const recordedStock = Number(p.stock_quantity ?? p.stock);
+    const stock_quantity = stockStr
+      ? Number(stockStr.split(':')[1])
+      : Number.isFinite(recordedStock) && recordedStock >= 0 ? recordedStock : null;
     const filteredSizes = rawSizes.filter((s: any) => typeof s !== 'string' || !s.startsWith('STOCK:'));
 
     return {
       ...p,
       _id: p.id,
-      name: p.title || p.name || 'Unnamed Product',
-      primaryImage: p.image_url || p.primaryImage || '/assets/photo-week-1.jpg',
-      secondaryImage: p.secondary_image_url || p.secondaryImage || p.image_url || '/assets/photo-week-2.jpg',
-      active: p.is_available ?? true,
+      name: p.title || p.name || '',
+      primaryImage: p.image_url || p.primaryImage || '',
+      secondaryImage: p.secondary_image_url || p.secondaryImage || p.image_url || '',
+      active: p.is_available === true,
       sizes: filteredSizes,
       stock_quantity: stock_quantity,
       category_id: p.category_id,
@@ -109,6 +113,22 @@ export const useProducts = () => {
   return useQuery({
     queryKey: ['products'],
     queryFn: getProducts,
+  });
+};
+
+function hasVerifiedPublicTitle(name: string): boolean {
+  const normalized = name.trim().replace(/\s+/g, ' ')
+  if (!normalized || !/[\p{L}\p{N}]/u.test(normalized)) return false
+  // These unverified rows remain untouched and editable in admin. Avoid
+  // exposing obvious filler-only titles in the public catalog until verified.
+  const compact = normalized.replace(/[^\p{L}\p{N}]/gu, '').toLocaleLowerCase()
+  return compact !== 'whitedress'
+}
+
+export const usePublicProducts = () => {
+  return useQuery({
+    queryKey: ['products', 'public'],
+    queryFn: async () => (await getProducts()).filter((product: any) => product.active && hasVerifiedPublicTitle(product.name)),
   });
 };
 
@@ -311,4 +331,20 @@ export const uploadFile = async (bucket: string, file: File, onProgress?: (progr
       reject(error);
     }
   });
+};
+
+
+export const uploadWithSignedUrl = async (bucket: string, file: File) => {
+  const { data: signed, error: signError } = await supabase.functions.invoke('create-admin-content-upload', {
+    body: { bucket, contentType: file.type, fileSize: file.size },
+  });
+  if (signError || !signed?.path || !signed?.token || !signed?.publicUrl) {
+    throw signError || new Error('A signed upload could not be created.');
+  }
+
+  const { error: uploadError } = await supabase.storage
+    .from(bucket)
+    .uploadToSignedUrl(signed.path, signed.token, file, { contentType: file.type, upsert: false });
+  if (uploadError) throw uploadError;
+  return signed.publicUrl as string;
 };

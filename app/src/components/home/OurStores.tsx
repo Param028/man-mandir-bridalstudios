@@ -1,98 +1,114 @@
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { MapPin, Phone, Mail } from 'lucide-react'
+import { MapPin, Phone, Mail, ExternalLink } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { supabase } from '@/lib/supabase'
+import { isSafeHttpUrl } from '@/lib/siteSettings'
 
-const stores = [
-  {
-    id: 1,
-    city: 'New Delhi',
-    address: '42 Fashion Street, Lajpat Nagar',
-    phone: '+91 98765 43210',
-    email: 'delhi@manmandir.com',
-    timings: '10:00 AM - 8:00 PM',
-  },
-  {
-    id: 2,
-    city: 'Mumbai',
-    address: '15 Linking Road, Bandra West',
-    phone: '+91 98765 43211',
-    email: 'mumbai@manmandir.com',
-    timings: '11:00 AM - 9:00 PM',
-  },
-]
+type Store = {
+  id: string
+  name: string
+  city: string | null
+  address: string | null
+  phone: string | null
+  email: string | null
+  timings: string | null
+  maps_url: string | null
+  display_order: number
+}
 
 export default function OurStores() {
+  const [stores, setStores] = useState<Store[]>([])
+  const [loaded, setLoaded] = useState(false)
+
+  useEffect(() => {
+    let mounted = true
+    const load = async () => {
+      const { data, error } = await supabase
+        .from('store')
+        .select('id,name,city,address,phone,email,timings,maps_url,display_order')
+        .eq('is_active', true)
+        .order('display_order', { ascending: true })
+      if (error) {
+        console.error('Unable to load active stores:', error)
+        if (mounted) setLoaded(true)
+        return
+      }
+      if (mounted) {
+        setStores(data ?? [])
+        setLoaded(true)
+      }
+    }
+    void load()
+    return () => { mounted = false }
+  }, [])
+
+  if (!loaded || stores.length === 0) return null
+
   return (
-    <section className="py-20 px-6 md:px-12 bg-[#F8F5F0]">
-      <div className="max-w-[1440px] mx-auto">
+    <section className="bg-[#F8F5F0] px-6 py-20 md:px-12" aria-labelledby="our-stores-title">
+      <div className="mx-auto max-w-[1440px]">
         <motion.h2
+          id="our-stores-title"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
-          className="font-display text-4xl md:text-5xl text-[#2C2C2C] tracking-[0.06em] mb-12 text-center"
+          className="mb-12 text-center font-display text-4xl tracking-[0.06em] text-[#2C2C2C] md:text-5xl"
         >
           Our Stores
         </motion.h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+        <div className="mx-auto grid max-w-5xl grid-cols-1 gap-8 md:grid-cols-2">
           {stores.map((store, index) => (
-            <motion.div
+            <motion.article
               key={store.id}
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: index * 0.2 }}
-              className="bg-[#F5F0E8] p-8 border border-[#DDD6CC]"
+              transition={{ duration: 0.6, delay: index * 0.1 }}
+              className="border border-[#DDD6CC] bg-[#F5F0E8] p-8"
             >
-              <h3 className="font-display text-2xl text-[#2C2C2C] tracking-[0.06em] mb-6">
-                {store.city}
+              <h3 className="mb-6 font-display text-2xl tracking-[0.04em] text-[#2C2C2C]">
+                {[store.name, store.city].filter(Boolean).join(' · ')}
               </h3>
               <div className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <MapPin size={20} className="text-[#C9A96E] mt-1 flex-shrink-0" />
-                  <div>
-                    <p className="font-body text-[#2C2C2C]">{store.address}</p>
+                {store.address && (
+                  <div className="flex items-start gap-3">
+                    <MapPin size={20} aria-hidden="true" className="mt-1 shrink-0 text-[#8C7045]" />
+                    <div>
+                      <p className="whitespace-pre-line font-body text-[#2C2C2C]">{store.address}</p>
+                      {isSafeHttpUrl(store.maps_url) && (
+                        <a href={store.maps_url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1 font-body text-sm text-[#6B4F1D] underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#6B4F1D]">
+                          Directions <ExternalLink size={13} aria-hidden="true" />
+                        </a>
+                      )}
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Phone size={20} className="text-[#C9A96E] flex-shrink-0" />
-                  <a href={`tel:${store.phone}`} className="font-body text-[#C9A96E] hover:underline">
-                    {store.phone}
-                  </a>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Mail size={20} className="text-[#C9A96E] flex-shrink-0" />
-                  <a href={`mailto:${store.email}`} className="font-body text-[#C9A96E] hover:underline">
-                    {store.email}
-                  </a>
-                </div>
-                <div className="pt-4 border-t border-[#DDD6CC]">
-                  <p className="font-body text-sm text-[#6B6560]">
-                    <span className="font-medium">Timings:</span> {store.timings}
-                  </p>
-                </div>
+                )}
+                {store.phone && (
+                  <div className="flex items-center gap-3">
+                    <Phone size={18} aria-hidden="true" className="shrink-0 text-[#8C7045]" />
+                    <a href={`tel:${store.phone.replace(/[^+\d]/g, '')}`} className="font-body text-[#6B4F1D] underline underline-offset-2">{store.phone}</a>
+                  </div>
+                )}
+                {store.email && (
+                  <div className="flex items-center gap-3">
+                    <Mail size={18} aria-hidden="true" className="shrink-0 text-[#8C7045]" />
+                    <a href={`mailto:${store.email}`} className="break-all font-body text-[#6B4F1D] underline underline-offset-2">{store.email}</a>
+                  </div>
+                )}
+                {store.timings && <p className="border-t border-[#DDD6CC] pt-4 font-body text-sm text-[#514B46]">{store.timings}</p>}
               </div>
-            </motion.div>
+            </motion.article>
           ))}
         </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6, delay: 0.4 }}
-          className="mt-12 text-center"
-        >
-          <p className="font-body text-[#6B6560] mb-4">
-            Visit our boutiques for a personalized styling experience
-          </p>
-          <a
-            href="/book-appointment"
-            className="inline-block font-body text-xs tracking-[0.15em] uppercase px-8 py-3.5 bg-[#C9A96E] text-white hover:bg-[#B8985E] transition-colors duration-300"
-          >
+        <div className="mt-12 text-center">
+          <Link to="/book-appointment" className="inline-block bg-[#6B4F1D] px-8 py-3.5 font-body text-xs uppercase tracking-[0.15em] text-white transition-colors hover:bg-[#51401F] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6B4F1D]">
             Book Appointment
-          </a>
-        </motion.div>
+          </Link>
+        </div>
       </div>
     </section>
   )

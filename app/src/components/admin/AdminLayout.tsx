@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   BarChart3, Video, Image, Grid3X3, Calendar, CreditCard,
-  Settings, LogOut, Menu, X, Bell, ChevronLeft, ChevronRight
+  Settings, LogOut, Menu, X, ChevronLeft, ChevronRight, Tag, MessageSquare, Store, Bell
 } from 'lucide-react'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
+import { supabase } from '@/lib/supabase'
 
 import { FolderTree } from 'lucide-react'
 
@@ -16,15 +17,35 @@ const navItems = [
   { icon: Grid3X3, label: 'Products', path: '/admin/products' },
   { icon: Calendar, label: 'Bookings', path: '/admin/bookings' },
   { icon: CreditCard, label: 'Payments', path: '/admin/payments' },
+  { icon: Tag, label: 'Sales & Offers', path: '/admin/sales' },
+  { icon: MessageSquare, label: 'Reviews', path: '/admin/reviews' },
+  { icon: Store, label: 'Stores', path: '/admin/stores' },
   { icon: Settings, label: 'Settings', path: '/admin/settings' },
 ]
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [pendingReviewCount, setPendingReviewCount] = useState(0)
   const location = useLocation()
   const navigate = useNavigate()
   const { logout } = useAdminAuth()
+
+  useEffect(() => {
+    let active = true
+    const loadPendingCount = async () => {
+      const { count, error } = await supabase.from('review').select('id', { count: 'exact', head: true }).eq('status', 'pending')
+      if (active && !error) setPendingReviewCount(count ?? 0)
+    }
+    void loadPendingCount()
+    const timer = window.setInterval(() => void loadPendingCount(), 60_000)
+    window.addEventListener('focus', loadPendingCount)
+    return () => {
+      active = false
+      window.clearInterval(timer)
+      window.removeEventListener('focus', loadPendingCount)
+    }
+  }, [])
 
   const handleLogout = () => {
     logout()
@@ -95,6 +116,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     '/admin/products': 'Products',
     '/admin/bookings': 'Bookings',
     '/admin/payments': 'Payments',
+    '/admin/sales': 'Sales & Offers',
+    '/admin/reviews': 'Customer Reviews',
+    '/admin/stores': 'Stores',
+    '/admin/gallery/': 'Gallery Media',
     '/admin/settings': 'Settings',
   }
 
@@ -133,11 +158,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </h1>
           </div>
           <div className="flex items-center gap-4">
-            <button className="relative text-[#6B6560] hover:text-[#2C2C2C] transition-colors">
-              <Bell size={20} />
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#C4705A] text-white text-[9px] rounded-full flex items-center justify-center font-body">
-                2
-              </span>
+            <button type="button" onClick={() => navigate('/admin/reviews')} aria-label={pendingReviewCount ? `${pendingReviewCount} pending customer reviews. Open moderation.` : 'Open customer review moderation'} title="Pending customer reviews" className="relative flex h-9 w-9 items-center justify-center rounded-full text-[#514B46] hover:bg-[#F8F5F0] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#6B4F1D]">
+              <Bell size={18} aria-hidden="true" />
+              {pendingReviewCount > 0 && <span className="absolute -right-1 -top-1 flex min-h-4 min-w-4 items-center justify-center rounded-full bg-[#A24D41] px-1 font-body text-[9px] font-semibold leading-none text-white">{pendingReviewCount > 99 ? '99+' : pendingReviewCount}</span>}
             </button>
             <div className="w-9 h-9 rounded-full bg-[#C9A96E] flex items-center justify-center text-white font-body text-sm font-medium">
               M

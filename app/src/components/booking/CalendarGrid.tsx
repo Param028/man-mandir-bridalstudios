@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, isSameMonth, isSameDay, addMonths, subMonths, isBefore, startOfDay, isAfter, addDays } from 'date-fns'
 import { getAvailabilityForDate } from '@/lib/data'
+import { bookedTimesForDate, useBookingAvailability } from '@/lib/bookingAvailability'
 import { motion, AnimatePresence } from 'framer-motion'
 
 interface CalendarGridProps {
@@ -11,6 +12,7 @@ interface CalendarGridProps {
 
 export default function CalendarGrid({ selectedDate, onSelectDate }: CalendarGridProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date())
+  const { data: bookings = [], isLoading, isError, refetch } = useBookingAvailability()
   const today = startOfDay(new Date())
   const maxDate = addDays(today, 60)
 
@@ -30,13 +32,17 @@ export default function CalendarGrid({ selectedDate, onSelectDate }: CalendarGri
 
   const dayLabels = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
 
-  const getDotColor = (date: Date): string | null => {
+  const getLiveAvailability = (date: Date) => {
+    if (isLoading || isError) return 'none' as const
+    return getAvailabilityForDate(date, bookedTimesForDate(date, bookings))
+  }
+
+  const getDotColor = (date: Date, availability: ReturnType<typeof getAvailabilityForDate>): string | null => {
     if (!isSameMonth(date, currentMonth)) return null
     if (isBefore(date, today) || isAfter(date, maxDate)) return null
-    const avail = getAvailabilityForDate(date)
-    if (avail === 'none') return null
-    if (avail === 'full') return 'bg-[#4A8C6F]'
-    if (avail === 'partial') return 'bg-[#C9A84C]'
+    if (availability === 'none') return null
+    if (availability === 'full') return 'bg-[#4A8C6F]'
+    if (availability === 'partial') return 'bg-[#C9A84C]'
     return 'bg-[#C4705A]'
   }
 
@@ -60,6 +66,9 @@ export default function CalendarGrid({ selectedDate, onSelectDate }: CalendarGri
           <ChevronRight size={20} />
         </button>
       </div>
+
+      {isLoading && <p role="status" className="mb-3 text-center font-body text-xs text-[#6B6560]">Checking live appointment availability…</p>}
+      {isError && <div role="alert" className="mb-3 border border-[#C4705A]/40 bg-[#FFF8F6] p-3 text-center font-body text-xs text-[#7A382C]">Live appointment availability could not be checked. <button type="button" onClick={() => void refetch()} className="font-semibold underline underline-offset-2">Try again</button></div>}
 
       {/* Day Labels */}
       <div className="grid grid-cols-7 gap-1 mb-2">
@@ -88,8 +97,9 @@ export default function CalendarGrid({ selectedDate, onSelectDate }: CalendarGri
               const isPast = isBefore(date, today)
               const isFuture = isAfter(date, maxDate)
               const isWednesday = date.getDay() === 3
-              const isDisabled = !isCurrentMonth || isPast || isFuture || isWednesday
-              const dotColor = getDotColor(date)
+              const availability = getLiveAvailability(date)
+              const isDisabled = !isCurrentMonth || isPast || isFuture || isWednesday || isLoading || isError || availability === 'empty'
+              const dotColor = getDotColor(date, availability)
 
               return (
                 <button
@@ -107,7 +117,7 @@ export default function CalendarGrid({ selectedDate, onSelectDate }: CalendarGri
                       ? 'text-[#9B9590] cursor-not-allowed'
                       : 'text-[#2C2C2C] hover:bg-[rgba(201,169,110,0.1)] cursor-pointer'
                   }`}
-                  title={isWednesday ? 'Studio Closed' : undefined}
+                  title={isWednesday ? 'Studio Closed' : availability === 'empty' ? 'Fully booked' : undefined}
                 >
                   {format(date, 'd')}
                   {dotColor && (

@@ -22,7 +22,8 @@ export default function Navbar() {
   const { count } = useCart()
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 100)
+    const handleScroll = () => setScrolled(window.scrollY >= 80)
+    handleScroll()
     window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
@@ -35,7 +36,8 @@ export default function Navbar() {
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.6, ease: 'easeOut' }}
-        className={`fixed top-0 left-0 right-0 z-[1000] h-[72px] transition-all duration-300 ease-out ${
+        style={isHome ? { top: 'var(--sale-announcement-height, 0px)' } : undefined}
+        className={`fixed top-0 left-0 right-0 z-[1000] h-[80px] transition-all duration-300 ease-out ${
           isTransparent
             ? 'bg-transparent'
             : 'bg-[rgba(245,240,232,0.92)] backdrop-blur-[12px] border-b border-[#DDD6CC]'

@@ -110,7 +110,7 @@ export default function BookingForm({ selectedDate, selectedSlot, onSubmit, onBa
             type="tel"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
-            placeholder="+91 98765 43210"
+            placeholder="+91 XXXXX XXXXX"
             className={`w-full bg-white border rounded px-4 py-3.5 font-body text-[15px] text-[#2C2C2C] placeholder:text-[#9B9590] outline-none transition-all duration-200 focus:border-[#C9A96E] focus:shadow-[0_0_0_3px_rgba(201,169,110,0.15)] ${
               errors.phone ? 'border-[#C4705A] shadow-[0_0_0_3px_rgba(196,112,90,0.1)]' : 'border-[#D0C9C0]'
             }`}

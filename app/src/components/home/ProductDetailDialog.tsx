@@ -1,16 +1,23 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { X, Star, ShoppingBag, Zap } from 'lucide-react'
+import { X, ShoppingBag, Zap } from 'lucide-react'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import type { Product } from '@/lib/data'
 import SizeGuideModal from './SizeGuideModal'
 import { useCart } from '@/lib/cartContext'
+import CustomerReviews from '@/components/home/CustomerReviews'
 
 interface ProductDetailDialogProps {
   product: Product | null
   open: boolean
   onOpenChange: (open: boolean) => void
+}
+
+function numericStock(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value) && value >= 0) return value
+  if (typeof value === 'string' && value.trim() && Number.isFinite(Number(value)) && Number(value) >= 0) return Number(value)
+  return null
 }
 
 export default function ProductDetailDialog({
@@ -43,13 +50,11 @@ export default function ProductDetailDialog({
 
       // Set default size (first string or first object with stock > 0)
       const sizes = (product.sizes || []) as any[]
-      const firstSize = sizes.find((s) =>
-        typeof s === 'string' ? true : s.stock > 0
-      )
+      const firstSize = sizes.find((s) => typeof s === 'string' || numericStock(s.stock) === null || numericStock(s.stock)! > 0)
       setSelectedSize(typeof firstSize === 'string' ? firstSize : firstSize?.size || '')
 
       // Set default available color
-      const firstAvailableColor = (product.colors as any[])?.find((c: any) => c.stock > 0)?.name || ''
+      const firstAvailableColor = (product.colors as any[])?.find((c: any) => numericStock(c.stock) === null || numericStock(c.stock)! > 0)?.name || ''
       setSelectedColor(firstAvailableColor)
 
       setIsZoomed(false)
@@ -59,17 +64,14 @@ export default function ProductDetailDialog({
 
   if (!product) return null
 
-  // Normalize sizes after null check
-  // DB stores plain strings ['S','M'] or objects [{size,stock}] — unify to objects
+  // DB stores size names and optional explicit stock markers. Unknown stock stays unknown.
+  const productStock = numericStock((product as any).stock_quantity ?? (product as any).stockQuantity ?? (product as any).stock)
   const normalizedSizes = ((product.sizes || []) as any[]).map((s: any) =>
-    typeof s === 'string'
-      ? { size: s, stock: (product as any).stock_quantity ?? (product as any).stockQuantity ?? 10 }
-      : s
+    typeof s === 'string' ? { size: s, stock: productStock } : { ...s, stock: numericStock(s.stock) }
   )
 
-  // Format currency in Indian Rupees
   const formatPrice = (price?: number) => {
-    if (!price) return 'Price on Request'
+    if (typeof price !== 'number' || price <= 0) return null
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency: 'INR',
@@ -77,45 +79,26 @@ export default function ProductDetailDialog({
     }).format(price)
   }
 
-  // Generate stars
-  const renderStars = (rating: number = 5) => {
-    const stars = []
-    const floor = Math.floor(rating)
-    for (let i = 1; i <= 5; i++) {
-      stars.push(
-        <Star
-          key={i}
-          size={14}
-          className={`${
-            i <= floor
-              ? 'fill-[#C9A96E] text-[#C9A96E]'
-              : i - 0.5 <= rating
-              ? 'fill-[#C9A96E]/50 text-[#C9A96E]'
-              : 'text-neutral-300'
-          }`}
-        />
-      )
-    }
-    return stars
-  }
-
-  // Calculate current availability based on selected size/color
-  const getStockCount = () => {
-    // If we have normalized sizes, use them
-    if (normalizedSizes.length > 0) {
-      const sizeObj = normalizedSizes.find((s) => s.size === selectedSize)
-      const colorObj = (product.colors as any[])?.find((c: any) => c.name === selectedColor)
-      if (sizeObj && colorObj) return Math.min(sizeObj.stock, colorObj.stock)
-      if (sizeObj) return sizeObj.stock
-      if (colorObj) return colorObj.stock
-      // No size selected but sizes exist — show stock of first available
-      return normalizedSizes[0]?.stock ?? ((product as any).stock_quantity ?? (product as any).stockQuantity ?? 0)
-    }
-    // No sizes at all — fall back to stockQuantity
-    return (product as any).stock_quantity ?? (product as any).stockQuantity ?? 0
+  // Calculate current availability from recorded values only; null means unknown.
+  const getStockCount = (): number | null => {
+    const sizeObj = normalizedSizes.find((size) => size.size === selectedSize)
+    const colorObj = (product.colors as any[])?.find((color: any) => color.name === selectedColor)
+    const sizeStock = sizeObj ? numericStock(sizeObj.stock) : null
+    const colorStock = colorObj ? numericStock(colorObj.stock) : null
+    if (sizeObj && colorObj && sizeStock !== null && colorStock !== null) return Math.min(sizeStock, colorStock)
+    if (sizeObj && sizeStock !== null) return sizeStock
+    if (colorObj && colorStock !== null) return colorStock
+    if ((sizeObj || colorObj) && productStock !== null) return productStock
+    if (!sizeObj && !colorObj && normalizedSizes.length > 0) return numericStock(normalizedSizes[0]?.stock) ?? productStock
+    return productStock
   }
 
   const stockCount = getStockCount()
+  const hasDiscount = typeof product.discountedPrice === 'number' && product.discountedPrice > 0 && typeof product.price === 'number' && product.price > product.discountedPrice
+  const currentPriceLabel = formatPrice(hasDiscount ? product.discountedPrice : product.price)
+  const originalPriceLabel = hasDiscount ? formatPrice(product.price) : null
+  const isAvailable = stockCount === null ? product.active === true : stockCount > 0
+  const canPurchase = isAvailable && currentPriceLabel !== null
 
   // Track zoom position
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -126,9 +109,9 @@ export default function ProductDetailDialog({
   }
 
   // Gallery list
-  const galleryImages = product.images && product.images.length > 0
-    ? product.images
-    : [product.primaryImage, product.secondaryImage].filter(Boolean)
+  const galleryImages = Array.isArray(product.images)
+    ? product.images.filter((image): image is string => typeof image === 'string' && image.trim().length > 0)
+    : [product.primaryImage, product.secondaryImage].filter((image): image is string => Boolean(image))
 
   const handleAddToCart = () => {
     if (normalizedSizes.length > 0 && !selectedSize) {
@@ -188,7 +171,7 @@ export default function ProductDetailDialog({
                         : 'border-[#E5E0D8] opacity-75 hover:opacity-100'
                     }`}
                   >
-                    <img src={img} alt={`thumbnail ${idx}`} className="w-full h-full object-cover" />
+                    <img src={img} alt={`${product.name} view ${idx + 1}`} className="w-full h-full object-cover" loading="lazy" />
                   </button>
                 ))}
               </div>
@@ -203,16 +186,7 @@ export default function ProductDetailDialog({
                 onMouseLeave={() => setIsZoomed(false)}
                 onClick={() => setIsZoomed(!isZoomed)}
               >
-                <img
-                  src={selectedImage}
-                  alt={product.name}
-                  className="w-full h-full object-cover transition-transform duration-200 ease-out"
-                  style={{
-                    transformOrigin: `${zoomPos.x}% ${zoomPos.y}%`,
-                    transform: isZoomed ? 'scale(2.2)' : 'scale(1)',
-                  }}
-                  loading="eager"
-                />
+                {selectedImage && <img src={selectedImage} alt={product.name} className="h-full w-full object-cover transition-transform duration-200 ease-out" style={{ transformOrigin: `${zoomPos.x}% ${zoomPos.y}%`, transform: isZoomed ? 'scale(2.2)' : 'scale(1)' }} loading="eager" />}
 
                 {/* Subtle instructions overlay */}
                 <div className="absolute bottom-3 right-3 bg-black/60 backdrop-blur-xs text-white text-[9px] tracking-wider uppercase px-2 py-1 rounded pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300 md:opacity-75">
@@ -228,27 +202,9 @@ export default function ProductDetailDialog({
             {/* Upper half details */}
             <div className="space-y-6">
               
-              {/* Category, Rating, and Badge */}
+              {/* Database-backed category and stock flags */}
               <div className="flex items-center justify-between flex-wrap gap-2">
-                <span className="font-body text-[10px] tracking-[0.2em] text-[#C9A96E] uppercase font-semibold">
-                  {product.category === 'lehenga'
-                    ? 'Bridal Lehenga'
-                    : product.category === 'saree'
-                    ? 'Pure Silk Saree'
-                    : product.category === 'cocktail'
-                    ? 'Designer Gown'
-                    : 'Indo-Western Fusion'}
-                </span>
-                
-                {/* Rating */}
-                <div className="flex items-center gap-1.5 bg-[#F8F5F0] px-2.5 py-1 border border-[#E5E0D8] rounded">
-                  <div className="flex items-center gap-0.5">{renderStars(product.rating)}</div>
-                  {product.rating && (
-                    <span className="font-body text-[10px] text-[#6B6560] font-medium">
-                      {product.rating.toFixed(1)}
-                    </span>
-                  )}
-                </div>
+                {product.category && <span className="font-body text-[10px] font-semibold uppercase tracking-[0.2em] text-[#6B4F1D]">{product.category}</span>}
               </div>
 
               {/* Title & Price */}
@@ -258,30 +214,13 @@ export default function ProductDetailDialog({
                 </h3>
                 
                 <div className="flex items-baseline gap-3">
-                  {product.discountedPrice ? (
-                    <>
-                      <span className="font-body text-lg md:text-xl font-semibold text-[#2C2C2C]">
-                        {formatPrice(product.discountedPrice)}
-                      </span>
-                      <span className="font-body text-xs text-[#9B9590] line-through">
-                        {formatPrice(product.price)}
-                      </span>
-                      <span className="font-body text-[10px] font-semibold text-[#4A8C6F] tracking-wider uppercase bg-[rgba(74,140,111,0.1)] px-2 py-0.5 rounded">
-                        Special Offer
-                      </span>
-                    </>
-                  ) : (
-                    <span className="font-body text-lg md:text-xl font-semibold text-[#2C2C2C]">
-                      {formatPrice(product.price)}
-                    </span>
-                  )}
+                  <span className="font-body text-lg font-semibold text-[#2C2C2C] md:text-xl">{currentPriceLabel ?? 'Price on request'}</span>
+                  {originalPriceLabel && <span className="font-body text-xs text-[#6B6560] line-through">{originalPriceLabel}</span>}
                 </div>
               </div>
 
               {/* Description */}
-              <p className="font-body text-xs text-[#6B6560] leading-relaxed font-light">
-                {product.description}. Exclusively designed and handcrafted for the modern bride, preserving heritage artisanal embroidery techniques.
-              </p>
+              {product.description && <p className="font-body text-xs font-light leading-relaxed text-[#514B46]">{product.description}</p>}
 
               {/* Colors selector */}
               {product.colors && product.colors.length > 0 && (
@@ -297,7 +236,8 @@ export default function ProductDetailDialog({
                   
                   <div className="flex items-center gap-2.5">
                     {product.colors.map((c) => {
-                      const isColorAvailable = c.stock > 0
+                      const colorStock = numericStock(c.stock)
+                      const isColorAvailable = colorStock === null ? product.active : colorStock > 0
                       const isSelected = selectedColor === c.name
                       return (
                         <button
@@ -347,7 +287,8 @@ export default function ProductDetailDialog({
                   
                   <div className="flex flex-wrap gap-2">
                     {normalizedSizes.map((s) => {
-                      const isSizeAvailable = s.stock > 0
+                      const sizeStock = numericStock(s.stock)
+                      const isSizeAvailable = sizeStock === null ? product.active : sizeStock > 0
                       const isSelected = selectedSize === s.size
                       return (
                         <button
@@ -461,7 +402,12 @@ export default function ProductDetailDialog({
                 </span>
                 
                 <div className="flex items-center gap-1.5">
-                  {stockCount > 0 ? (
+                  {stockCount === null && product.active ? (
+                    <>
+                      <span className="w-2 h-2 rounded-full bg-[#8C7045]" />
+                      <span className="font-body text-xs font-semibold text-[#6B4F1D]">Availability on request</span>
+                    </>
+                  ) : stockCount !== null && stockCount > 0 ? (
                     <>
                       <span className="w-2 h-2 rounded-full bg-[#4A8C6F]" />
                       <span className="font-body text-xs font-semibold text-[#4A8C6F]">
@@ -482,28 +428,33 @@ export default function ProductDetailDialog({
                 </div>
               </div>
 
-              {/* Buy Now */}
-              <button
-                disabled={stockCount <= 0}
-                onClick={handleBuyNow}
-                className="w-full font-body text-xs tracking-[0.18em] uppercase px-8 py-4 bg-[#C9A96E] text-white text-center hover:bg-[#B8985E] disabled:bg-neutral-300 disabled:text-neutral-500 disabled:cursor-not-allowed border border-transparent transition-all duration-300 font-semibold flex items-center justify-center gap-2"
-              >
-                <Zap size={14} />
-                {stockCount > 0 ? 'BUY NOW' : 'OUT OF STOCK'}
-              </button>
-
-              {/* Add to Cart */}
-              <button
-                disabled={stockCount <= 0}
-                onClick={handleAddToCart}
-                className="w-full font-body text-xs tracking-[0.18em] uppercase px-8 py-3.5 bg-transparent text-[#2C2C2C] text-center hover:bg-[#2C2C2C] hover:text-white disabled:opacity-40 disabled:cursor-not-allowed border border-[#2C2C2C] transition-all duration-300 font-semibold flex items-center justify-center gap-2"
-              >
-                <ShoppingBag size={14} />
-                ADD TO CART
-              </button>
+              {currentPriceLabel ? (
+                <>
+                  <button
+                    disabled={!canPurchase}
+                    onClick={handleBuyNow}
+                    className="w-full font-body text-xs tracking-[0.18em] uppercase px-8 py-4 bg-[#C9A96E] text-white text-center hover:bg-[#B8985E] disabled:bg-neutral-300 disabled:text-neutral-500 disabled:cursor-not-allowed border border-transparent transition-all duration-300 font-semibold flex items-center justify-center gap-2"
+                  >
+                    <Zap size={14} />{isAvailable ? 'BUY NOW' : 'OUT OF STOCK'}
+                  </button>
+                  <button
+                    disabled={!canPurchase}
+                    onClick={handleAddToCart}
+                    className="w-full font-body text-xs tracking-[0.18em] uppercase px-8 py-3.5 bg-transparent text-[#2C2C2C] text-center hover:bg-[#2C2C2C] hover:text-white disabled:opacity-40 disabled:cursor-not-allowed border border-[#2C2C2C] transition-all duration-300 font-semibold flex items-center justify-center gap-2"
+                  >
+                    <ShoppingBag size={14} />ADD TO CART
+                  </button>
+                </>
+              ) : (
+                <button type="button" onClick={() => { onOpenChange(false); navigate('/book-appointment') }} className="w-full border border-[#2C2C2C] bg-[#2C2C2C] px-8 py-4 text-center font-body text-xs font-semibold uppercase tracking-[0.18em] text-white transition-colors hover:bg-[#514B46]">
+                  Price on request · Book a fitting
+                </button>
+              )}
             </div>
 
           </div>
+
+          {open && <div className="md:col-span-12 border-t border-[#E5E0D8]"><CustomerReviews targetType="product" targetId={String((product as any)._id || product.id)} targetLabel={product.name} /></div>}
 
         </div>
         </DialogContent>

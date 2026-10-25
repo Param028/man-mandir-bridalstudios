@@ -2,15 +2,14 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import ProductCard from './ProductCard'
 import ProductDetailDialog from './ProductDetailDialog'
-import { useProducts } from '@/lib/api'
+import { usePublicProducts } from '@/lib/api'
 import type { Product } from '@/lib/data'
-import { Loader2 } from 'lucide-react'
 
 export default function BestSellers() {
   const [showModal, setShowModal] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   
-  const { data: products = [], isLoading } = useProducts()
+  const { data: products = [], isLoading } = usePublicProducts()
 
   // Filter active best sellers
   const bestSellers = products.filter((p: any) => p.active && p.isBestSeller)
@@ -20,15 +19,7 @@ export default function BestSellers() {
     setShowModal(true)
   }
 
-  if (isLoading) {
-    return (
-      <div className="bg-[#F5F0E8] py-24 flex items-center justify-center">
-        <Loader2 className="animate-spin text-[#C9A96E]" size={28} />
-      </div>
-    )
-  }
-
-  if (bestSellers.length === 0) return null
+  if (isLoading || bestSellers.length === 0) return null
 
   return (
     <section id="best-sellers" className="bg-[#F5F0E8] py-24 md:py-32 lg:py-36">

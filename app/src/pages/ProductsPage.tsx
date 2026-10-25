@@ -5,61 +5,28 @@ import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
 import ProductCard from '@/components/home/ProductCard'
 import ProductDetailDialog from '@/components/home/ProductDetailDialog'
-import { useProducts, useCategories, useSubcategories } from '@/lib/api'
+import { usePublicProducts, useCategories, useSubcategories } from '@/lib/api'
 import type { Product } from '@/lib/data'
 import { Slider } from '@/components/ui/slider'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from '@/components/ui/sheet'
 import { motion, AnimatePresence } from 'framer-motion'
 
-// Size options
-const SIZE_OPTIONS = ['XS', 'S', 'M', 'L', 'XL', 'XXL']
-
-// Color options with hex codes
-const COLOR_OPTIONS = [
-  { id: 'Red/Maroon', label: 'Red & Maroon', hex: '#B80F0A' },
-  { id: 'Pink/Blush', label: 'Pink & Blush', hex: '#F1C0B9' },
-  { id: 'Gold/Ivory', label: 'Ivory & Gold', hex: '#E8DCC8' },
-  { id: 'Green', label: 'Green & Emerald', hex: '#004B49' },
-]
-
-// Occasion options
-const OCCASION_OPTIONS = ['Wedding', 'Engagement', 'Reception', 'Haldi', 'Mehendi']
-
-// Fabric options
-const FABRIC_OPTIONS = ['Silk', 'Net', 'Velvet', 'Georgette', 'Satin', 'Cotton', 'Other']
-
-// Designer options
-const DESIGNER_OPTIONS = ['Sabyasachi', 'Manish Malhotra', 'Anita Dongre', 'Tarun Tahiliani']
-
-// Helper to categorize product material
-const getFabricGroup = (material: string): string => {
-  const mat = material.toLowerCase()
-  if (mat.includes('silk') || mat.includes('chanderi') || mat.includes('kanjeevaram') || mat.includes('katan') || mat.includes('banarasi')) return 'Silk'
-  if (mat.includes('net') || mat.includes('tulle') || mat.includes('organza')) return 'Net'
-  if (mat.includes('velvet')) return 'Velvet'
-  if (mat.includes('georgette')) return 'Georgette'
-  if (mat.includes('satin')) return 'Satin'
-  if (mat.includes('cotton')) return 'Cotton'
-  return 'Other'
-}
-
-// Helper to categorize product color
-const getColorFamily = (colorName: string): string => {
-  const name = colorName.toLowerCase()
-  if (name.includes('red') || name.includes('maroon') || name.includes('crimson') || name.includes('coral') || name.includes('velvet')) return 'Red/Maroon'
-  if (name.includes('pink') || name.includes('blush') || name.includes('rose') || name.includes('paradise')) return 'Pink/Blush'
-  if (name.includes('gold') || name.includes('ivory') || name.includes('white') || name.includes('champagne')) return 'Gold/Ivory'
-  if (name.includes('green') || name.includes('emerald')) return 'Green'
-  return 'Other'
-}
-
 export default function ProductsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
 
-  const { data: products = [], isLoading: loadingProducts } = useProducts()
+  const { data: products = [], isLoading: loadingProducts } = usePublicProducts()
   const { data: categories = [], isLoading: loadingCategories } = useCategories()
   const { data: subcategories = [], isLoading: loadingSubcategories } = useSubcategories()
+
+  const sizeOptions = Array.from(new Set<string>((products as any[]).flatMap((product) => (product.sizes ?? []).map((item: any) => typeof item === 'string' ? item : item?.size).filter((value: unknown): value is string => typeof value === 'string' && Boolean(value.trim()))))).sort((a, b) => a.localeCompare(b))
+  const colorEntries: Array<[string, { id: string; label: string; hex: string }]> = (products as any[]).flatMap((product) => (product.colors ?? []).filter((color: any) => typeof color?.name === 'string' && color.name.trim()).map((color: any) => [color.name, { id: color.name, label: color.name, hex: typeof color.hex === 'string' && /^#[0-9a-f]{6}$/i.test(color.hex) ? color.hex : '#D0C9C0' }]))
+  const colorOptions = Array.from(new Map<string, { id: string; label: string; hex: string }>(colorEntries).values())
+  const occasionOptions = Array.from(new Set<string>((products as any[]).flatMap((product) => Array.isArray(product.occasions) ? product.occasions.filter((value: unknown): value is string => typeof value === 'string' && Boolean(value.trim())) : []))).sort((a, b) => a.localeCompare(b))
+  const fabricOptions = Array.from(new Set<string>((products as any[]).map((product) => product.fabricDetails?.material).filter((value: unknown): value is string => typeof value === 'string' && Boolean(value.trim())))).sort((a, b) => a.localeCompare(b))
+  const designerOptions = Array.from(new Set<string>((products as any[]).map((product) => product.designer).filter((value: unknown): value is string => typeof value === 'string' && Boolean(value.trim())))).sort((a, b) => a.localeCompare(b))
+  const catalogPrices = (products as any[]).map((product) => Number(product.discountedPrice ?? product.price)).filter((value) => Number.isFinite(value) && value > 0)
+  const priceMax = Math.max(1_000, Math.ceil(Math.max(0, ...catalogPrices) / 1_000) * 1_000)
 
   const isLoading = loadingProducts || loadingCategories || loadingSubcategories
 
@@ -67,7 +34,7 @@ export default function ProductsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [selectedSubcategories, setSelectedSubcategories] = useState<string[]>([])
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 250000])
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, priceMax])
   const [selectedSizes, setSelectedSizes] = useState<string[]>([])
   const [selectedColors, setSelectedColors] = useState<string[]>([])
   const [selectedOccasions, setSelectedOccasions] = useState<string[]>([])
@@ -93,6 +60,10 @@ export default function ProductsPage() {
   // Mobile drawer filter open state
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false)
 
+  useEffect(() => {
+    setPriceRange([0, priceMax])
+  }, [priceMax])
+
   // Sync category and subcategory from URL search query on mount and query changes
   useEffect(() => {
     const categoryQuery = searchParams.get('category')
@@ -115,6 +86,25 @@ export default function ProductsPage() {
       setSelectedSubcategories([])
     }
   }, [searchParams, categories])
+
+  useEffect(() => {
+    const productId = searchParams.get('product')
+    if (!productId || loadingProducts) return
+    const product = (products as any[]).find((item) => String(item._id ?? item.id) === productId)
+    if (product) {
+      setSelectedProduct(product)
+      setIsDetailOpen(true)
+    }
+  }, [searchParams, products, loadingProducts])
+
+  const handleProductDialogOpenChange = (open: boolean) => {
+    setIsDetailOpen(open)
+    if (!open && searchParams.has('product')) {
+      const params = new URLSearchParams(searchParams)
+      params.delete('product')
+      setSearchParams(params, { replace: true })
+    }
+  }
 
   const toggleSection = (section: string) => {
     setOpenSections((prev) => ({ ...prev, [section]: !prev[section] }))
@@ -192,7 +182,7 @@ export default function ProductsPage() {
   const handleClearAll = () => {
     setSearchQuery('')
     setSelectedCategories([])
-    setPriceRange([0, 250000])
+    setPriceRange([0, priceMax])
     setSelectedSizes([])
     setSelectedColors([])
     setSelectedOccasions([])
@@ -228,7 +218,7 @@ export default function ProductsPage() {
         handleDesignerToggle(value)
         break
       case 'price':
-        setPriceRange([0, 250000])
+        setPriceRange([0, priceMax])
         break
     }
   }
@@ -261,8 +251,8 @@ export default function ProductsPage() {
       // Price filter (actual price paid, check discountedPrice first)
       const actualPrice = product.discountedPrice ?? product.price ?? 0
       if (actualPrice < priceRange[0]) return false
-      // If priceRange[1] is at max (250000), treat it as 'no upper limit'
-      if (priceRange[1] < 250000 && actualPrice > priceRange[1]) return false
+      // If priceRange[1] is at max (priceMax), treat it as 'no upper limit'
+      if (priceRange[1] < priceMax && actualPrice > priceRange[1]) return false
 
       // Size filter (must have at least one selected size in stock)
       if (selectedSizes.length > 0) {
@@ -275,7 +265,7 @@ export default function ProductsPage() {
       // Color filter
       if (selectedColors.length > 0) {
         const hasAvailableColor = (product.colors as any[])?.some(
-          (c: any) => selectedColors.includes(getColorFamily(c.name)) && c.stock > 0
+          (c: any) => selectedColors.includes(c.name) && (typeof c.stock !== 'number' ? product.active : c.stock > 0)
         )
         if (!hasAvailableColor) return false
       }
@@ -288,7 +278,7 @@ export default function ProductsPage() {
 
       // Fabric filter
       if (selectedFabrics.length > 0) {
-        const fabricGroup = getFabricGroup(product.fabricDetails?.material || '')
+        const fabricGroup = product.fabricDetails?.material || ''
         if (!selectedFabrics.includes(fabricGroup)) return false
       }
 
@@ -328,7 +318,7 @@ export default function ProductsPage() {
       tags.push({ type: 'subcategory', label: `Subcategory: ${label}`, value: subId })
     })
 
-    if (priceRange[0] > 0 || priceRange[1] < 250000) {
+    if (priceRange[0] > 0 || priceRange[1] < priceMax) {
       tags.push({
         type: 'price',
         label: `Price: ₹${(priceRange[0] / 1000).toFixed(0)}k - ₹${(priceRange[1] / 1000).toFixed(0)}k`,
@@ -341,7 +331,7 @@ export default function ProductsPage() {
     })
 
     selectedColors.forEach((colorId) => {
-      const label = COLOR_OPTIONS.find((c) => c.id === colorId)?.label || colorId
+      const label = colorOptions.find((c) => c.id === colorId)?.label || colorId
       tags.push({ type: 'color', label: `Color: ${label}`, value: colorId })
     })
 
@@ -456,8 +446,8 @@ export default function ProductsPage() {
         </div>
       )}
 
-      {/* Price Range Filter */}
-      <div className="border-b border-[#EDE6DA] pb-5">
+      {/* Price Range Filter — only show it when a real product price exists. */}
+      {catalogPrices.length > 0 && <div className="border-b border-[#EDE6DA] pb-5">
         <button
           onClick={() => toggleSection('price')}
           className="w-full flex items-center justify-between font-body text-xs tracking-wider uppercase text-[#2C2C2C] font-semibold text-left mb-3 hover:text-[#C9A96E] transition-colors"
@@ -477,7 +467,7 @@ export default function ProductsPage() {
               <Slider
                 value={[priceRange[0], priceRange[1]]}
                 min={0}
-                max={250000}
+                max={priceMax}
                 step={5000}
                 onValueChange={(val) => setPriceRange(val as [number, number])}
                 className="w-full py-1 text-[#C9A96E]"
@@ -515,7 +505,7 @@ export default function ProductsPage() {
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
+      </div>}
 
       {/* Size Filter */}
       <div className="border-b border-[#EDE6DA] pb-5">
@@ -536,7 +526,7 @@ export default function ProductsPage() {
               className="overflow-hidden"
             >
               <div className="grid grid-cols-4 gap-2 pt-1">
-                {SIZE_OPTIONS.map((size) => {
+                {sizeOptions.map((size) => {
                   const isSelected = selectedSizes.includes(size)
                   return (
                     <button
@@ -576,7 +566,7 @@ export default function ProductsPage() {
               transition={{ duration: 0.2 }}
               className="overflow-hidden space-y-2.5 pt-1"
             >
-              {COLOR_OPTIONS.map((opt) => {
+              {colorOptions.map((opt) => {
                 const isSelected = selectedColors.includes(opt.id)
                 return (
                   <button
@@ -627,7 +617,7 @@ export default function ProductsPage() {
               transition={{ duration: 0.2 }}
               className="overflow-hidden space-y-2.5"
             >
-              {OCCASION_OPTIONS.map((occ) => (
+              {occasionOptions.map((occ) => (
                 <label key={occ} className="flex items-center gap-3 cursor-pointer group">
                   <input
                     type="checkbox"
@@ -663,7 +653,7 @@ export default function ProductsPage() {
               transition={{ duration: 0.2 }}
               className="overflow-hidden space-y-2.5"
             >
-              {FABRIC_OPTIONS.map((fabric) => (
+              {fabricOptions.map((fabric) => (
                 <label key={fabric} className="flex items-center gap-3 cursor-pointer group">
                   <input
                     type="checkbox"
@@ -699,7 +689,7 @@ export default function ProductsPage() {
               transition={{ duration: 0.2 }}
               className="overflow-hidden space-y-2.5"
             >
-              {DESIGNER_OPTIONS.map((des) => (
+              {designerOptions.map((des) => (
                 <label key={des} className="flex items-center gap-3 cursor-pointer group">
                   <input
                     type="checkbox"
@@ -967,7 +957,7 @@ export default function ProductsPage() {
       <ProductDetailDialog
         product={selectedProduct}
         open={isDetailOpen}
-        onOpenChange={setIsDetailOpen}
+          onOpenChange={handleProductDialogOpenChange}
       />
     </div>
   )

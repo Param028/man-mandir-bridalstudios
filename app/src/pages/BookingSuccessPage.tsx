@@ -108,7 +108,7 @@ export default function BookingSuccessPage() {
               {[
                 'Arrive 15 minutes before your appointment',
                 'Bring reference images or fabric swatches if desired',
-                'Call us at +91 98765 43210 for any changes',
+                'Contact the studio team if you need to make any changes to your appointment',
               ].map((tip) => (
                 <li key={tip} className="flex items-start gap-3">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#C9A96E] mt-2 flex-shrink-0" />
