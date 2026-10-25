@@ -4,6 +4,7 @@ import { MapPin, Phone, Mail, ExternalLink } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { isSafeHttpUrl } from '@/lib/siteSettings'
+import ContentPlaceholderSection from '@/components/home/ContentPlaceholderSection'
 
 type Store = {
   id: string
@@ -43,7 +44,8 @@ export default function OurStores() {
     return () => { mounted = false }
   }, [])
 
-  if (!loaded || stores.length === 0) return null
+  if (!loaded) return null
+  if (stores.length === 0) return <ContentPlaceholderSection id="our-stores" eyebrow="Visit the studio" title="Our Stores" description="Store details will appear here as they are added from the admin section." images={['/assets/studio-intro.jpg', '/assets/gallery-detail-1.jpg', '/assets/gallery-detail-2.jpg', '/assets/gallery-detail-3.jpg']} href="/book-appointment" ctaLabel="Book a studio visit" />
 
   return (
     <section className="bg-[#F8F5F0] px-6 py-20 md:px-12" aria-labelledby="our-stores-title">

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowRight, ChevronLeft } from 'lucide-react'
 import { useCategories, useSubcategories } from '@/lib/api'
+import ContentPlaceholderSection from '@/components/home/ContentPlaceholderSection'
 
 export default function ShopByStyle() {
   const { data: categories = [], isLoading: loadingCat } = useCategories()
@@ -29,7 +30,8 @@ export default function ShopByStyle() {
     ? allSubcategories.filter((s: any) => s.category_id === selectedCategoryId)
     : []
 
-  if (isLoading || displayCategories.length === 0) return null
+  if (isLoading) return null
+  if (displayCategories.length === 0) return <ContentPlaceholderSection id="shop-style" eyebrow="The collection" title="Shop by Style" images={['/assets/lehenga-primary.jpg', '/assets/saree-primary.jpg', '/assets/cocktail-primary.jpg', '/assets/indo-western-primary.jpg']} />
 
   return (
     <section id="shop-style" className="py-20 px-6 md:px-12 bg-[#F5F0E8] overflow-hidden">

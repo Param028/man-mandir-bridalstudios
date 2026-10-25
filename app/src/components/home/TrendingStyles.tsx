@@ -2,12 +2,14 @@ import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { ArrowRight } from 'lucide-react'
 import { usePublicProducts } from '@/lib/api'
+import ContentPlaceholderSection from '@/components/home/ContentPlaceholderSection'
 
 export default function TrendingStyles() {
   const { data: products = [], isLoading } = usePublicProducts()
   const displayItems = products.filter((product: any) => product.is_trending).slice(0, 4)
 
-  if (isLoading || displayItems.length === 0) return null
+  if (isLoading) return null
+  if (displayItems.length === 0) return <ContentPlaceholderSection eyebrow="The collection" title="Trending Styles" images={['/assets/photo-week-1.jpg', '/assets/photo-week-2.jpg', '/assets/photo-week-3.jpg', '/assets/photo-week-4.jpg']} />
 
   return (
     <section className="bg-[#F8F5F0] px-6 py-20 md:px-12">

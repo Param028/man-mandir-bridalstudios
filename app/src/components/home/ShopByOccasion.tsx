@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useCategories } from '@/lib/api'
+import ContentPlaceholderSection from '@/components/home/ContentPlaceholderSection'
 
 export default function ShopByOccasion() {
   const { data: categories = [], isLoading } = useCategories()
@@ -9,7 +10,8 @@ export default function ShopByOccasion() {
     .filter((category: any) => category.is_featured && category.is_active !== false && category.name?.trim() && category.cover_image)
     .slice(0, 4)
 
-  if (isLoading || displayItems.length === 0) return null
+  if (isLoading) return null
+  if (displayItems.length === 0) return <ContentPlaceholderSection eyebrow="For every celebration" title="Shop by Occasion" images={['/assets/saree-secondary.jpg', '/assets/cocktail-secondary.jpg', '/assets/indo-western-secondary.jpg', '/assets/lehenga-secondary.jpg']} tone="sand" />
 
   return (
     <section className="py-20 px-6 md:px-12 bg-[#F5F0E8]">

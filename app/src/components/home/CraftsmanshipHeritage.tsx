@@ -1,4 +1,5 @@
 import { usePublicSiteSettings } from '@/lib/siteSettings'
+import ContentPlaceholderSection from '@/components/home/ContentPlaceholderSection'
 
 type CraftsmanshipContent = {
   title?: string
@@ -39,7 +40,7 @@ export default function CraftsmanshipHeritage() {
   const stats = normalizeStats(settings?.stats)
   const title = typeof content?.title === 'string' ? content.title.trim() : ''
 
-  if (!title && paragraphs.length === 0 && stats.length === 0) return null
+  if (!title && paragraphs.length === 0 && stats.length === 0) return <ContentPlaceholderSection id="craftsmanship" eyebrow="The ManMandir standard" title="Craftsmanship & Heritage" description="This section is ready for verified studio content from the admin settings." images={['/assets/studio-intro.jpg', '/assets/gallery-detail-1.jpg', '/assets/gallery-detail-2.jpg', '/assets/gallery-detail-3.jpg']} href="/book-appointment" ctaLabel="Book an appointment" tone="white" />
 
   return (
     <section className="bg-[#F8F5F0] px-6 py-20 md:px-12">

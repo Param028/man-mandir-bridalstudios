@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useQuery } from '@tanstack/react-query'
+import ContentPlaceholderSection from '@/components/home/ContentPlaceholderSection'
 import { supabase } from '@/lib/supabase'
 
 type PhotoRow = {
@@ -33,7 +34,8 @@ export default function PhotosOfWeekCarousel() {
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: false, align: 'start', slidesToScroll: 1, containScroll: 'trimSnaps' })
   const photos = useMemo(() => data, [data])
 
-  if (isLoading || photos.length === 0) return null
+  if (isLoading) return null
+  if (photos.length === 0) return <ContentPlaceholderSection id="gallery" eyebrow="The gallery" title="Photos of the Week" images={['/assets/photo-week-1.jpg', '/assets/photo-week-2.jpg', '/assets/photo-week-3.jpg', '/assets/photo-week-4.jpg']} href="/gallery" ctaLabel="Visit the gallery" tone="sand" />
 
   return (
     <section id="gallery" className="bg-[#F5F0E8] py-20 md:py-28 lg:py-32" aria-labelledby="photos-of-week-title">
