@@ -1,13 +1,24 @@
 import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
 
 export type BookedAppointment = { booking_date: string; booking_time: string }
 
 async function fetchAvailability(): Promise<BookedAppointment[]> {
-  const { data, error } = await supabase.functions.invoke('get-booking-availability', { body: {} })
-  if (error) throw new Error('Live appointment availability could not be checked.')
-  if (!Array.isArray(data?.bookings)) throw new Error('Live appointment availability returned an invalid response.')
-  return data.bookings.filter((booking: unknown): booking is BookedAppointment => {
+  const supabaseUrl = String(import.meta.env.VITE_SUPABASE_URL || '').replace(/\/$/, '')
+  if (!supabaseUrl) throw new Error('Live appointment availability could not be checked.')
+  // This public read exposes only busy appointment slots. text/plain keeps the
+  // request simple so mobile browsers do not need an OPTIONS preflight.
+  const response = await fetch(`${supabaseUrl}/functions/v1/get-booking-availability`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: '{}',
+    cache: 'no-store',
+  })
+  if (!response.ok) throw new Error('Live appointment availability could not be checked.')
+  const data: unknown = await response.json()
+  if (!data || typeof data !== 'object' || !Array.isArray((data as { bookings?: unknown }).bookings)) {
+    throw new Error('Live appointment availability returned an invalid response.')
+  }
+  return (data as { bookings: unknown[] }).bookings.filter((booking: unknown): booking is BookedAppointment => {
     if (!booking || typeof booking !== 'object') return false
     const row = booking as Record<string, unknown>
     return typeof row.booking_date === 'string' && typeof row.booking_time === 'string'
