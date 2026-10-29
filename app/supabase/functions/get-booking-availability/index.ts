@@ -1,9 +1,18 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+const DEFAULT_ALLOWED_ORIGINS = [
+  "https://manmandirstudio.com",
+  "https://www.manmandirstudio.com",
+];
+
 function cors(req: Request): HeadersInit | null {
-  const allowed = (Deno.env.get("ALLOWED_ORIGIN") || "").split(",").map((value) => value.trim()).filter(Boolean);
+  const configured = (Deno.env.get("ALLOWED_ORIGIN") || "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+  const allowed = configured.length ? configured : DEFAULT_ALLOWED_ORIGINS;
   const origin = req.headers.get("origin");
-  if (!allowed.length || (origin && !allowed.includes(origin))) return null;
+  if (origin && !allowed.includes(origin)) return null;
   return {
     "Access-Control-Allow-Origin": origin || allowed[0],
     "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -36,22 +45,23 @@ Deno.serve(async (req) => {
     const url = Deno.env.get("SUPABASE_URL");
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     if (!url || !serviceKey) return respond({ error: "service_unavailable" }, 503, headers);
+
     const now = new Date();
     const end = new Date(now.getTime() + 61 * 24 * 60 * 60 * 1_000);
     const service = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
     const { data, error } = await service
       .from("bookings")
-      .select("booking_date,booking_time")
+      .select("appointment_date,appointment_time")
       .in("status", ["pending", "confirmed"])
-      .gte("booking_date", now.toISOString())
-      .lt("booking_date", end.toISOString())
-      .order("booking_date", { ascending: true })
+      .gte("appointment_date", now.toISOString().slice(0, 10))
+      .lt("appointment_date", end.toISOString().slice(0, 10))
+      .order("appointment_date", { ascending: true })
       .limit(1_000);
     if (error) throw new Error("availability_read_failed");
 
     const bookings = (data ?? []).flatMap((row) => {
-      if (typeof row.booking_date !== "string" || typeof row.booking_time !== "string") return [];
-      return [{ booking_date: row.booking_date, booking_time: row.booking_time }];
+      if (typeof row.appointment_date !== "string" || typeof row.appointment_time !== "string") return [];
+      return [{ booking_date: row.appointment_date, booking_time: row.appointment_time }];
     });
     return respond({ bookings }, 200, headers);
   } catch (error) {
