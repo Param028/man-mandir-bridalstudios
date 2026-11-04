@@ -1,7 +1,11 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 // Required environment variables: SUPABASE_URL, SUPABASE_ANON_KEY,
-// SUPABASE_SERVICE_ROLE_KEY, ALLOWED_ORIGIN (one exact origin, e.g. https://example.com).
+// SUPABASE_SERVICE_ROLE_KEY. ALLOWED_ORIGIN may contain additional exact origins.
+const DEFAULT_ALLOWED_ORIGINS = [
+  "https://manmandirstudio.com",
+  "https://www.manmandirstudio.com",
+];
 const UPLOAD_RULES: Record<string, { types: Record<string, string>; maxSizeBytes: number }> = {
   "hero-video": {
     types: { "video/mp4": "mp4", "video/webm": "webm", "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" },
@@ -24,9 +28,10 @@ const UPLOAD_RULES: Record<string, { types: Record<string, string>; maxSizeBytes
 };
 
 function cors(req: Request): HeadersInit | null {
-  const allowedOrigins = (Deno.env.get("ALLOWED_ORIGIN") || "").split(",").map((value) => value.trim()).filter(Boolean);
+  const configuredOrigins = (Deno.env.get("ALLOWED_ORIGIN") || "").split(",").map((value) => value.trim()).filter(Boolean);
+  const allowedOrigins = configuredOrigins.length ? configuredOrigins : DEFAULT_ALLOWED_ORIGINS;
   const requestOrigin = req.headers.get("origin");
-  if (!requestOrigin || !allowedOrigins.includes(requestOrigin)) return null;
+  if (requestOrigin && !allowedOrigins.includes(requestOrigin)) return null;
   return {
     "Access-Control-Allow-Origin": requestOrigin,
     "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -52,14 +57,14 @@ Deno.serve(async (req) => {
   if (!headers) {
     return respond({ error: "origin_not_allowed" }, 403, { "Content-Type": "application/json" });
   }
-  if (req.method === "OPTIONS") return new Response("ok", { status: 204, headers });
+  if (req.method === "OPTIONS") return new Response(null, { status: 204, headers });
   if (req.method !== "POST") return respond({ error: "method_not_allowed" }, 405, headers);
 
   try {
     const authorization = req.headers.get("authorization") || "";
     const match = authorization.match(/^Bearer\s+([^\s]+)$/i);
     if (!match) return respond({ error: "unauthorized" }, 401, headers);
-    const accessToken = *****;
+    const accessToken = match[1];
 
     const raw = await req.text();
     if (new TextEncoder().encode(raw).byteLength > 2_000) {
@@ -107,7 +112,10 @@ Deno.serve(async (req) => {
     const { data: userData, error: userError } = await callerClient.auth.getUser(accessToken);
     if (userError || !userData.user) return respond({ error: "unauthorized" }, 401, headers);
 
-    const { data: admin, error: adminError } = await callerClient
+    const serviceClient = createClient(supabaseUrl, requiredEnv("SUPABASE_SERVICE_ROLE_KEY"), {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    const { data: admin, error: adminError } = await serviceClient
       .from("admins")
       .select("id")
       .eq("id", userData.user.id)
@@ -116,10 +124,8 @@ Deno.serve(async (req) => {
     if (adminError || !admin) return respond({ error: "forbidden" }, 403, headers);
 
     const path = `${crypto.randomUUID()}.${rule.types[contentType]}`;
-    // The service-role client is used only to create the signed storage upload URL.
-    const serviceClient = createClient(supabaseUrl, requiredEnv("SUPABASE_SERVICE_ROLE_KEY"), {
-      auth: { persistSession: false, autoRefreshToken: false },
-    });
+    // The service-role client is used only for this server-side admin check and to
+    // create the signed storage upload URL; it never leaves the function.
     const { data: upload, error: uploadError } = await serviceClient.storage
       .from(bucket)
       .createSignedUploadUrl(path, { upsert: false });
