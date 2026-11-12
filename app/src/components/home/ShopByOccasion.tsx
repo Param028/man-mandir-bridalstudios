@@ -1,52 +1,59 @@
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { useCategories } from '@/lib/api'
-import ContentPlaceholderSection from '@/components/home/ContentPlaceholderSection'
+import { ArrowRight } from 'lucide-react'
+
+type Occasion = {
+  label: string
+  filter: string
+  image: string
+  description: string
+}
+
+const OCCASIONS: Occasion[] = [
+  { label: 'Wedding', filter: 'Wedding', image: '/assets/lehenga-primary.jpg', description: 'Statement bridal silhouettes' },
+  { label: 'Engagement', filter: 'Engagement', image: '/assets/cocktail-primary.jpg', description: 'Polished looks for the ring ceremony' },
+  { label: 'Reception', filter: 'Reception', image: '/assets/indo-western-primary.jpg', description: 'Evening-ready celebration style' },
+  { label: 'Haldi', filter: 'Haldi', image: '/assets/photo-week-1.jpg', description: 'Bright, joyful ceremony dressing' },
+  { label: 'Mehendi', filter: 'Mehendi', image: '/assets/photo-week-2.jpg', description: 'Colourful looks for every ritual' },
+  { label: 'Indian Celebrations', filter: 'Festive', image: '/assets/saree-primary.jpg', description: 'Sarees and occasion favourites' },
+]
 
 export default function ShopByOccasion() {
-  const { data: categories = [], isLoading } = useCategories()
-
-  const displayItems = categories
-    .filter((category: any) => category.is_featured && category.is_active !== false && category.name?.trim() && category.cover_image)
-    .slice(0, 4)
-
-  if (isLoading) return null
-  if (displayItems.length === 0) return <ContentPlaceholderSection eyebrow="For every celebration" title="Shop by Occasion" images={['/assets/saree-secondary.jpg', '/assets/cocktail-secondary.jpg', '/assets/indo-western-secondary.jpg', '/assets/lehenga-secondary.jpg']} tone="sand" />
-
   return (
-    <section className="py-20 px-6 md:px-12 bg-[#F5F0E8]">
-      <div className="max-w-[1440px] mx-auto">
-        <motion.h2
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="font-display text-4xl md:text-5xl text-[#2C2C2C] tracking-[0.06em] mb-12 text-center"
-        >
-          Shop by Occasion
-        </motion.h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {displayItems.map((occasion: any, index: number) => (
-            <motion.div
-              key={occasion.id}
-              initial={{ opacity: 0, y: 30 }}
+    <section className="bg-[#F5F0E8] px-6 py-20 md:px-12" aria-labelledby="shop-by-occasion-title">
+      <div className="mx-auto max-w-[1440px]">
+        <div className="mb-10 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="mb-3 font-body text-xs uppercase tracking-[0.22em] text-[#8A672B]">For every celebration</p>
+            <h2 id="shop-by-occasion-title" className="font-display text-4xl tracking-[0.06em] text-[#2C2C2C] md:text-5xl">Shop by Occasion</h2>
+          </div>
+          <Link to="/products" className="hidden items-center gap-2 font-body text-sm uppercase tracking-[0.15em] text-[#6B4F1D] hover:text-[#51401F] md:flex">
+            View all styles <ArrowRight size={16} aria-hidden="true" />
+          </Link>
+        </div>
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
+          {OCCASIONS.map((occasion, index) => (
+            <motion.article
+              key={occasion.filter}
+              initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: index * 0.1 }}
+              viewport={{ once: true, margin: '0px 0px -60px' }}
+              transition={{ duration: 0.4, delay: index * 0.05 }}
               className="group"
             >
-              <Link to={`/products?category=${occasion.slug}`}>
-                <div className="aspect-square overflow-hidden bg-[#EDE6DA] mb-4 relative">
-                  <img src={occasion.cover_image} alt={occasion.name} loading="lazy" className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" />
-                  <div className="absolute inset-0 bg-black/20 group-hover:bg-black/30 transition-colors duration-300" />
+              <Link to={`/products?occasion=${encodeURIComponent(occasion.filter)}`} className="block focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6B4F1D]">
+                <div className="relative mb-3 aspect-[4/5] overflow-hidden bg-[#EDE6DA]">
+                  <img src={occasion.image} alt={`${occasion.label} occasion styles`} loading={index < 2 ? 'eager' : 'lazy'} decoding="async" className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/5 to-transparent" />
+                  <span className="absolute bottom-3 left-3 right-3 font-display text-xl tracking-[0.04em] text-white md:text-2xl">{occasion.label}</span>
                 </div>
-                <h3 className="font-display text-2xl text-[#2C2C2C] tracking-[0.08em] mb-1">
-                  {occasion.name}
-                </h3>
+                <p className="font-body text-xs leading-relaxed text-[#6B6560]">{occasion.description}</p>
               </Link>
-            </motion.div>
+            </motion.article>
           ))}
+        </div>
+        <div className="mt-8 text-center md:hidden">
+          <Link to="/products" className="inline-flex items-center gap-2 font-body text-sm uppercase tracking-[0.15em] text-[#6B4F1D]">View all styles <ArrowRight size={16} aria-hidden="true" /></Link>
         </div>
       </div>
     </section>

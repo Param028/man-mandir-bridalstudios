@@ -16,8 +16,8 @@ export default function ProductsPage() {
   const navigate = useNavigate()
 
   const { data: products = [], isLoading: loadingProducts } = usePublicProducts()
-  const { data: categories = [], isLoading: loadingCategories } = useCategories()
-  const { data: subcategories = [], isLoading: loadingSubcategories } = useSubcategories()
+  const { data: categories = [] } = useCategories()
+  const { data: subcategories = [] } = useSubcategories()
 
   const sizeOptions = Array.from(new Set<string>((products as any[]).flatMap((product) => (product.sizes ?? []).map((item: any) => typeof item === 'string' ? item : item?.size).filter((value: unknown): value is string => typeof value === 'string' && Boolean(value.trim()))))).sort((a, b) => a.localeCompare(b))
   const colorEntries: Array<[string, { id: string; label: string; hex: string }]> = (products as any[]).flatMap((product) => (product.colors ?? []).filter((color: any) => typeof color?.name === 'string' && color.name.trim()).map((color: any) => [color.name, { id: color.name, label: color.name, hex: typeof color.hex === 'string' && /^#[0-9a-f]{6}$/i.test(color.hex) ? color.hex : '#D0C9C0' }]))
@@ -28,7 +28,8 @@ export default function ProductsPage() {
   const catalogPrices = (products as any[]).map((product) => Number(product.discountedPrice ?? product.price)).filter((value) => Number.isFinite(value) && value > 0)
   const priceMax = Math.max(1_000, Math.ceil(Math.max(0, ...catalogPrices) / 1_000) * 1_000)
 
-  const isLoading = loadingProducts || loadingCategories || loadingSubcategories
+  // Product cards are the primary content; filter metadata can hydrate afterward.
+  const isLoading = loadingProducts
 
   // Filter States
   const [searchQuery, setSearchQuery] = useState('')
@@ -68,6 +69,7 @@ export default function ProductsPage() {
   useEffect(() => {
     const categoryQuery = searchParams.get('category')
     const subcategoryQuery = searchParams.get('subcategory')
+    const occasionQuery = searchParams.get('occasion')
     
     if (categoryQuery) {
       const categoryExists = categories.some((c: any) => c.id === categoryQuery || c.slug === categoryQuery)
@@ -85,6 +87,7 @@ export default function ProductsPage() {
     } else {
       setSelectedSubcategories([])
     }
+    setSelectedOccasions(occasionQuery ? [occasionQuery] : [])
   }, [searchParams, categories])
 
   useEffect(() => {
@@ -290,9 +293,11 @@ export default function ProductsPage() {
       return true
     })
   }, [
+    products,
     searchQuery,
     selectedCategories,
     priceRange,
+    priceMax,
     selectedSizes,
     selectedColors,
     selectedOccasions,

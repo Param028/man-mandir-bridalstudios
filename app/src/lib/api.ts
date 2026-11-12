@@ -1,6 +1,29 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from './supabase';
 
+const QUERY_CACHE_TIME = 5 * 60 * 1000;
+const PUBLIC_PRODUCT_COLUMNS = 'id,title,description,price,category,material,color,size,occasion,fabric,designer,image_url,is_available,created_at,updated_at,category_id,subcategory_id,images,is_trending';
+
+function mapPublicProduct(p: any) {
+  const rawSizeValue = p.size || [];
+  const rawSizes = Array.isArray(rawSizeValue) ? rawSizeValue : typeof rawSizeValue === 'string' ? [rawSizeValue] : [];
+  const stockStr = rawSizes.find((s: any) => typeof s === 'string' && s.startsWith('STOCK:'));
+  const filteredSizes = rawSizes.filter((s: any) => typeof s !== 'string' || !s.startsWith('STOCK:'));
+  return {
+    ...p,
+    _id: p.id,
+    name: p.title || '',
+    primaryImage: p.image_url || '',
+    secondaryImage: Array.isArray(p.images) && typeof p.images[1] === 'string' ? p.images[1] : p.image_url || '',
+    active: p.is_available === true,
+    sizes: filteredSizes,
+    stock_quantity: stockStr ? Number(stockStr.split(':')[1]) : null,
+    occasions: Array.isArray(p.occasion) ? p.occasion : [],
+    fabricDetails: p.fabric || p.material ? { material: p.fabric || p.material } : undefined,
+    colors: p.color ? [{ name: p.color, stock: null }] : [],
+  };
+}
+
 // --- Products API ---
 
 export const getProducts = async () => {
@@ -54,7 +77,7 @@ export const deleteProduct = async (id: string) => {
 // --- Categories API ---
 
 export const getCategories = async () => {
-  const { data, error } = await supabase.from('categories').select('*').order('created_at', { ascending: true });
+  const { data, error } = await supabase.from('categories').select('id,name,slug,cover_image,created_at,is_featured').order('created_at', { ascending: true });
   if (error) throw error;
   return data;
 };
@@ -113,6 +136,8 @@ export const useProducts = () => {
   return useQuery({
     queryKey: ['products'],
     queryFn: getProducts,
+    staleTime: QUERY_CACHE_TIME,
+    gcTime: 30 * 60 * 1000,
   });
 };
 
@@ -128,7 +153,17 @@ function hasVerifiedPublicTitle(name: string): boolean {
 export const usePublicProducts = () => {
   return useQuery({
     queryKey: ['products', 'public'],
-    queryFn: async () => (await getProducts()).filter((product: any) => product.active && hasVerifiedPublicTitle(product.name)),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('products')
+        .select(PUBLIC_PRODUCT_COLUMNS)
+        .eq('is_available', true)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data ?? []).map(mapPublicProduct).filter((product: any) => hasVerifiedPublicTitle(product.name));
+    },
+    staleTime: QUERY_CACHE_TIME,
+    gcTime: 30 * 60 * 1000,
   });
 };
 
@@ -182,6 +217,8 @@ export const useCategories = () => {
   return useQuery({
     queryKey: ['categories'],
     queryFn: getCategories,
+    staleTime: QUERY_CACHE_TIME,
+    gcTime: 30 * 60 * 1000,
   });
 };
 
